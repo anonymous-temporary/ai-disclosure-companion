@@ -8,7 +8,7 @@
   'use strict';
   const $ = (s) => document.querySelector(s);
   const $$ = (s) => Array.from(document.querySelectorAll(s));
-  const V = '?v=12';                                        // bump on each release: GitHub Pages caches hard
+  const V = '?v=13';                                        // bump on each release: GitHub Pages caches hard
   const J = (p) => fetch('data/' + p + V).then((r) => r.json());
   const REDUCED = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   function countTo(el, to, suffix) {                       // a stat tile counts up to its value once
@@ -63,7 +63,9 @@
     $$('#nav button').forEach((b) => b.classList.toggle('on', b.dataset.view === v));
     $$('.view').forEach((s) => (s.hidden = s.id !== 'view-' + v));
     if (v !== 'overview' && window.Hero) Hero.pause();
+    if (v !== 'filings' && loaded.filings) leaveFilings();
     if (!loaded[v]) { loaded[v] = true; INIT[v](); }
+    else if (v === 'filings') startTour();
     window.scrollTo({ top: 0 });
   }
 
@@ -387,29 +389,58 @@
   }
 
   // ============================================================== FILINGS
-  const SENT = {};
+  // The grid (one square per firm-year) opens a FILING WINDOW (owner 2026-10-02, after the paper-3 review panel):
+  // every coded sentence of that 10-K, grouped by type with its six specificity criteria, beside the firm's
+  // resources as the models read them (fiscal year t-1). A short tour plays when the tab opens; any click, key,
+  // wheel or touch stops it and hands control to the reader.
+  const SENT = {}, CODED = {}, PROF = {};
   function sentFor(slug) {
     return SENT[slug] || (SENT[slug] = J('sentences/' + slug + '.json').catch(() => ({})));
   }
+  const codedFor = (cik) => CODED[cik] || (CODED[cik] = J('coded/' + cik + '.json').catch(() => ({})));
+  const profFor = (ind) => PROF[ind] || (PROF[ind] = J('profiles/' + SLUG[ind] + '.json').catch(() => ({})));
+  const FS = { F: null, byCik: {}, SY: null, years: [], render: null };
+  const IN_HOUSE = new Set(['Software & IT services', 'Computers & chips', 'Aerospace & defense', 'Auto manufacturing', 'Pharma & biotech']);
+
   function initFilings() {
-    need(['firms', 'diffusion'], ({ firms: F, diffusion: D }) => {
+    need(['firms', 'sector_year'], ({ firms: F, sector_year: SY }) => {
+      FS.F = F; FS.SY = SY;
+      F.forEach((f) => (FS.byCik[f.cik] = f));
       const sel = $('#inv-ind');
-      const sectors = Object.keys(SLUG);
-      sel.innerHTML = sectors.map((s) => '<option>' + esc(s) + '</option>').join('');
+      sel.innerHTML = Object.keys(SLUG).map((s) => '<option>' + esc(s) + '</option>').join('');
       sel.value = 'Software & IT services';
-      const years = []; for (let y = 2014; y <= 2025; y++) years.push(y);
-      const render = () => invRender(F, years);
-      sel.addEventListener('change', render);
-      $('#inv-c').addEventListener('change', render);
+      for (let y = 2014; y <= 2025; y++) FS.years.push(y);
+      FS.render = () => invRender(F, FS.years);
+      sel.addEventListener('change', FS.render);
+      $('#inv-c').addEventListener('change', FS.render);
       let t = null;
-      $('#inv-search').addEventListener('input', () => { clearTimeout(t); t = setTimeout(render, 150); });
-      render();
+      $('#inv-search').addEventListener('input', () => { clearTimeout(t); t = setTimeout(FS.render, 150); });
+      const grid = $('#inv-grid');
+      grid.addEventListener('click', (e) => {
+        const a = e.target.closest('a.inv-cell');
+        if (a) {
+          if (e.ctrlKey || e.metaKey || e.shiftKey || e.button !== 0) return;   // modifier-click: the 10-K itself
+          e.preventDefault(); C.hideTip(); openFiling(+a.dataset.cik, +a.dataset.fy); return;
+        }
+        const b = e.target.closest('.inv-name');
+        if (b) { C.hideTip(); const f = FS.byCik[+b.dataset.cik]; openFiling(f.cik, latestFy(f)); }
+      });
+      grid.addEventListener('mousemove', hoverCell);
+      grid.addEventListener('mouseleave', C.hideTip);
+      $('#inv-tour').addEventListener('click', () => (TOUR.on ? stopTour(null) : startTour()));
+      FS.render();
+      startTour();
     });
+  }
+  function latestFy(f) {
+    for (let i = f.years.length - 1; i >= 0; i--) if (f.years[i][2] > 0) return f.years[i][0];
+    return f.years[f.years.length - 1][0];
   }
   function secUrl(cik, adsh) {
     const plain = adsh.replace(/-/g, '');
     return 'https://www.sec.gov/Archives/edgar/data/' + cik + '/' + plain + '/' + adsh + '-index.htm';
   }
+  const LV = (y) => (!y[1] ? 'x' : y[2] === 0 ? 0 : y[3] === 0 ? 1 : y[3] <= 2 ? 2 : 3);
   function invRender(F, years) {
     const q = $('#inv-search').value.trim().toLowerCase();
     const onlyC = $('#inv-c').checked;
@@ -417,7 +448,6 @@
     let rows = q ? F.filter((f) => f.name.toLowerCase().includes(q)) : F.filter((f) => f.ind === sector);
     if (onlyC) rows = rows.filter((f) => f.years.some((y) => y[3] > 0));
     $('#inv-count').textContent = fmtInt(rows.length) + ' firms';
-    const grid = $('#inv-grid');
     const cap = 220;
     const head = '<div class="inv-row inv-head"><span></span>' +
       years.map((y) => '<span class="yh">' + String(y).slice(2) + '</span>').join('') + '<span class="yh">claims</span></div>';
@@ -427,78 +457,316 @@
       const cells = years.map((yr) => {
         const y = by[yr];
         if (!y) return '<span class="inv-cell"></span>';
-        const [fy, op, nai, nC] = y;
-        const lv = !op ? 'x' : nai === 0 ? 0 : nC === 0 ? 1 : nC <= 2 ? 2 : 3;
-        return '<a class="inv-cell lv-' + lv + '" href="' + secUrl(f.cik, y[7]) + '" target="_blank" rel="noopener"' +
-          ' data-cik="' + f.cik + '" data-fy="' + fy + '" data-ind="' + esc(f.ind) + '"' +
-          ' data-n="' + nai + '" data-c="' + nC + '" data-g="' + y[4] + '" data-f="' + y[5] + '"' +
-          ' aria-label="' + esc(f.name) + ' FY' + fy + '"></a>';
+        return '<a class="inv-cell lv-' + LV(y) + '" href="' + secUrl(f.cik, y[7]) + '" target="_blank" rel="noopener"' +
+          ' data-cik="' + f.cik + '" data-fy="' + y[0] + '" aria-label="' + esc(f.name) + ' FY' + y[0] + ', open its coded sentences"></a>';
       }).join('');
-      return '<div class="inv-row"><button class="inv-name" title="' + esc(f.name) + '">' + esc(f.name) + '</button>' +
+      return '<div class="inv-row" data-cik="' + f.cik + '"><button class="inv-name" data-cik="' + f.cik + '" title="Open ' + esc(f.name) +
+        '’s latest 10-K with AI sentences">' + esc(f.name) + '</button>' +
         cells + '<span class="inv-tot' + (totC ? '' : ' zero') + '">' + (totC || '') + '</span></div>';
     }).join('');
-    grid.innerHTML = head + html + (rows.length > cap
+    $('#inv-grid').innerHTML = head + html + (rows.length > cap
       ? '<p class="m-note">Showing the first ' + cap + ' of ' + fmtInt(rows.length) + ' firms; refine the search to see the rest.</p>' : '');
-    const names = grid.querySelectorAll('.inv-name');
-    rows.slice(0, names.length).forEach((f, i) => names[i].addEventListener('click', () => firmPanel(f)));
-    grid.querySelectorAll('a.inv-cell').forEach((a) => {
-      a.addEventListener('mousemove', async (e) => {
-        const d = a.dataset;
-        const base = '<b>' + esc(a.getAttribute('aria-label')) + '</b><br>' +
-          d.n + ' AI sentences · ' + d.c + ' specific claims, ' + d.g + ' generic risk, ' + d.f + ' firm risk';
-        C.showTip(base, e);
-        if (+d.n > 0) {
-          const s = (await sentFor(SLUG[d.ind]))[d.cik + '_' + d.fy];
-          if (s) C.showTip(base + '<q>' + esc(s.s) + '</q><i>' +
-            (s.c ? 'a specific claim, ' + s.pts + ' of 6 points' : 'the filing’s first coded AI sentence') +
-            ' · click to open the 10-K</i>', e);
-        }
-      });
-      a.addEventListener('mouseleave', C.hideTip);
-    });
+  }
+  async function hoverCell(e) {
+    const a = e.target.closest('a.inv-cell');
+    if (!a) { C.hideTip(); return; }
+    const f = FS.byCik[+a.dataset.cik], fy = +a.dataset.fy, y = f.years.find((r) => r[0] === fy);
+    const base = '<b>' + esc(f.name) + ' · FY' + fy + '</b><br>' + y[2] + ' AI sentences · ' + y[3] + ' specific claims, ' +
+      y[4] + ' generic risk, ' + y[5] + ' firm-specific risk';
+    const tail = '<i>click to open the coded sentences and the firm’s resources</i>';
+    C.showTip(base + tail, e);
+    if (y[2] > 0) {
+      const s = (await sentFor(SLUG[f.ind]))[f.cik + '_' + fy];
+      if (s && a.matches(':hover')) C.showTip(base + '<q>' + esc(s.s) + '</q>' + tail, e);
+    }
   }
 
-  // the firm profile (owner 2026-10-01): clicking a company name shows its disclosure and resource series,
-  // the same firm-year values the models read; a sparkline skips years where the value is missing
-  function fspark(years, vals, color) {
-    const W2 = 150, H2 = 34, pts = [];
-    const vs = vals.filter((v) => v != null);
-    if (!vs.length) return '<span class="fp-na">no data</span>';
-    const max = Math.max(...vs, 1e-9), x = (i) => (i / Math.max(1, vals.length - 1)) * W2;
-    const y = (v) => H2 - 3 - (v / max) * (H2 - 8);
-    let seg = [];
-    vals.forEach((v, i) => {
-      if (v == null) { if (seg.length) pts.push(seg); seg = []; }
-      else seg.push(x(i).toFixed(1) + ',' + y(v).toFixed(1));
+  // ---------------------------------------------------------------- the filing window
+  const KIND = {
+    C: ['Specific capability claim', 'k-c'], V: ['Capability, below the three-criteria bar', 'k-v'],
+    G: ['Generic AI risk', 'k-g'], F: ['Firm-specific AI risk', 'k-f'], O: ['Other AI mention', 'k-o'], X: ['Not about AI, excluded', 'k-x'],
+  };
+  const GROUP_ORDER = ['C', 'V', 'G', 'F', 'O', 'X'];
+  const GROUP_TITLE = {
+    C: 'Specific capability claims (C)', V: 'Capability statements below the bar', G: 'Generic AI risk (G)',
+    F: 'Firm-specific AI risk (F)', O: 'Other AI mentions', X: 'Excluded: not about AI',
+  };
+  const SECTION = {
+    item1: 'Item 1, Business', item1a: 'Item 1A, Risk factors', item1b: 'Item 1B', item2: 'Item 2, Properties',
+    item3: 'Item 3, Legal proceedings', item5: 'Item 5, Market', item7: 'Item 7, MD&A', item7a: 'Item 7A', unsegmented: 'section not identified',
+  };
+  const CRIT = ['action', 'use case', 'named product', 'number', 'date or stage', 'verifiable detail'];
+  const AI_RX = /\b(artificial intelligence|machine[- ]learning|deep learning|neural networks?|generative AI|GenAI|large language models?|LLMs?|computer vision|natural language processing|NLP|cognitive computing|conversational AI|agentic AI|AI\/ML|A\.I\.|AI|ML)\b/g;
+  const hl = (t) => esc(t).replace(AI_RX, '<mark class="kw">$1</mark>');
+  const fragLink = (url, t) => {
+    if (!url) return '';
+    const w = t.replace(/[“”"‘’]/g, ' ').split(/\s+/).filter(Boolean).slice(0, 7).join(' ');
+    return url + '#:~:text=' + encodeURIComponent(w);
+  };
+  const money = (m) => (m == null ? 'n/a' : Math.abs(m) >= 1000 ? '$' + (m / 1000).toFixed(m >= 10000 ? 0 : 1) + ' billion'
+    : '$' + (Math.abs(m) >= 10 ? Math.round(m) : m.toFixed(1)) + ' million');
+  const pctTxt = (v, d) => (v == null ? 'n/a' : (v * 100).toFixed(d === undefined ? 1 : d) + '%');
+  let WIN = null;
+
+  function closeWindow() {
+    if (!WIN) return;
+    WIN.el.remove(); WIN = null;
+    document.removeEventListener('keydown', winKeys);
+  }
+  function winKeys(e) {
+    if (!WIN) return;
+    if (e.key === 'Escape') closeWindow();
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+      const f = FS.byCik[WIN.cik], fys = f.years.map((y) => y[0]), i = fys.indexOf(WIN.fy) + (e.key === 'ArrowRight' ? 1 : -1);
+      if (i >= 0 && i < fys.length) { e.preventDefault(); fillWindow(WIN.cik, fys[i]); }
+    }
+  }
+  function openFiling(cik, fy, opts) {
+    closeWindow();
+    const f = FS.byCik[cik];
+    const el = document.createElement('div');
+    el.className = 'modal-back fw-back';
+    el.innerHTML = '<div class="modal fw" role="dialog" aria-modal="true" aria-label="Coded sentences and resources for ' + esc(f.name) + '"></div>';
+    document.body.appendChild(el);
+    WIN = { el, cik, fy, tour: !!(opts && opts.tour), filter: 'all' };
+    el.addEventListener('click', (e) => {
+      if (e.target === el || e.target.closest('.modal-x')) { closeWindow(); return; }
+      const yb = e.target.closest('.fw-yr'); if (yb) { fillWindow(cik, +yb.dataset.fy); return; }
+      const fb = e.target.closest('.fw-filter'); if (fb) { WIN.filter = fb.dataset.k; paintFilter(); }
     });
-    if (seg.length) pts.push(seg);
-    return '<svg viewBox="0 0 ' + W2 + ' ' + H2 + '" class="fp-spark">' +
-      pts.map((p) => p.length > 1
-        ? '<polyline points="' + p.join(' ') + '" fill="none" stroke="' + color + '" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>'
-        : '<circle cx="' + p[0].split(',')[0] + '" cy="' + p[0].split(',')[1] + '" r="2" fill="' + color + '"/>').join('') + '</svg>';
+    document.addEventListener('keydown', winKeys);
+    fillWindow(cik, fy);
   }
-  function firmPanel(f) {
-    const host = $('#firm-panel');
-    const ys = f.years, fys = ys.map((y) => y[0]);
-    const lastOf = (vals) => { for (let i = vals.length - 1; i >= 0; i--) if (vals[i] != null) return vals[i]; return null; };
-    const fmtPat = (v) => (v == null ? 'n/a' : v >= 10 ? fmtInt(Math.round(v)) : v.toFixed(1));
-    const series = [
-      ['Specific capability claims (C)', 'per 10,000 words', ys.map((y) => y[6]), '#111111', (v) => (v == null ? 'n/a' : fnum(v))],
-      ['R&D / revenue (R₁), t-1', 'ratio, capped at 1', ys.map((y) => y[8]), '#0b3d5c', (v) => (v == null ? 'n/a' : fnum(v))],
-      ['AI patent stock (R₂), t-1', 'patents, before the log', ys.map((y) => y[9]), '#6a51a3', fmtPat],
-      ['AI-worker share (R₃), t-1', 'share of employees, to FY2022', ys.map((y) => y[10]), '#1f8a70', (v) => (v == null ? 'n/a' : fnum(v))],
-    ];
-    host.innerHTML = '<div class="fp-head"><b>' + esc(f.name) + '</b><span>' + esc(f.ind) +
-      ' · FY' + fys[0] + ' to FY' + fys[fys.length - 1] + '</span>' +
-      '<button class="fp-x" aria-label="Close">×</button></div><div class="fp-grid">' +
-      series.map(([lab, unit, vals, col, fm]) =>
-        '<div class="fp-item"><div class="fp-lab">' + lab + '</div><div class="fp-unit">' + unit + '</div>' +
-        fspark(fys, vals, col) + '<div class="fp-last">latest ' + fm(lastOf(vals)) + '</div></div>').join('') +
-      '</div><p class="fp-note">These are the firm-year values the models read; a gap means the value is missing for that year.</p>';
-    host.hidden = false;
-    host.querySelector('.fp-x').addEventListener('click', () => (host.hidden = true));
-    host.scrollIntoView({ behavior: REDUCED ? 'auto' : 'smooth', block: 'nearest' });
+  function paintFilter() {
+    if (!WIN) return;
+    WIN.el.querySelectorAll('.fw-filter').forEach((b) => b.classList.toggle('on', b.dataset.k === WIN.filter));
+    WIN.el.querySelectorAll('.fw-group').forEach((g) => (g.hidden = WIN.filter !== 'all' && g.dataset.k !== WIN.filter));
   }
+  async function fillWindow(cik, fy) {
+    if (!WIN) return;
+    WIN.fy = fy; WIN.filter = 'all';
+    const f = FS.byCik[cik], box = WIN.el.querySelector('.fw');
+    const yrow = f.years.find((y) => y[0] === fy);
+    box.innerHTML = '<div class="fw-headwrap">' + head(f, fy, yrow, '') + '</div>' +
+      '<div class="fw-body"><section class="fw-sents"><p class="m-note">Loading the coded sentences…</p></section>' +
+      '<aside class="fw-res"><p class="m-note">Loading the resources…</p></aside></div>';
+    const [coded, prof] = await Promise.all([codedFor(cik), profFor(f.ind)]);
+    if (!WIN || WIN.cik !== cik || WIN.fy !== fy) return;               // the reader moved on while this loaded
+    const rec = coded[String(fy)] || { u: '', s: [] };
+    box.querySelector('.fw-headwrap').innerHTML = head(f, fy, yrow, rec.u);
+    box.querySelector('.fw-sents').innerHTML = sentencesHtml(rec, yrow);
+    box.querySelector('.fw-res').innerHTML = resourcesHtml(f, fy, prof[String(cik)] || []);
+    paintFilter();
+    if (WIN.tour) tourScroll(box.querySelector('.fw-sents'));
+  }
+  function head(f, fy, yrow, url) {
+    const kind = IN_HOUSE.has(f.ind) ? 'sector builds AI in-house' : 'sector buys AI';
+    const link = url || (yrow ? secUrl(f.cik, yrow[7]) : '');
+    const chips = f.years.map((y) => '<button class="fw-yr lv-' + LV(y) + (y[0] === fy ? ' on' : '') + '" data-fy="' + y[0] +
+      '" title="FY' + y[0] + ': ' + y[3] + ' specific claims">' + String(y[0]).slice(2) + '</button>').join('');
+    return '<div class="modal-head"><h3>' + esc(f.name) + ' <span class="fw-fy">FY' + fy + ' 10-K</span></h3>' +
+      '<span class="m-meta">' + esc(f.ind) + ' · ' + kind + '</span>' +
+      (link ? '<a class="modal-open" target="_blank" rel="noopener" href="' + link + '">10-K on sec.gov ↗</a>' : '') +
+      '<button class="modal-x" aria-label="Close">×</button></div>' +
+      '<div class="fw-years"><span>other years</span>' + chips + '<small>← → keys switch years · Esc closes</small></div>';
+  }
+  function sentencesHtml(rec, yrow) {
+    const S = rec.s;
+    if (!S.length) {
+      return '<p class="fw-empty">No sentence in this 10-K matched the AI lexicon, so nothing was coded. ' +
+        (yrow && !yrow[1] ? 'The filing is also outside the operating screen that year.' : '') + '</p>';
+    }
+    const groups = {}; GROUP_ORDER.forEach((k) => (groups[k] = []));
+    S.forEach((s) => groups[s[2][0]].push(s));
+    const counts = GROUP_ORDER.filter((k) => groups[k].length);
+    const filters = '<div class="fw-filters"><button class="fw-filter on" data-k="all">all ' + S.length + '</button>' +
+      counts.map((k) => '<button class="fw-filter ' + KIND[k][1] + '" data-k="' + k + '">' + GROUP_TITLE[k].replace(/ \([CGF]\)$/, '') +
+        ' ' + groups[k].length + '</button>').join('') + '</div>';
+    return filters + GROUP_ORDER.filter((k) => groups[k].length).map((k) =>
+      '<div class="fw-group" data-k="' + k + '"><h4 class="' + KIND[k][1] + '">' + GROUP_TITLE[k] + ' <span>' + groups[k].length + '</span></h4>' +
+      groups[k].map((s) => card(s, rec.u)).join('') + '</div>').join('') +
+      '<p class="m-note">Each sentence is shown as the three language models coded it (a label needs two of three votes). ' +
+      'Links jump to the sentence in the 10-K where the browser can find it.</p>';
+  }
+  function card(s, url) {
+    const [t, sec, k, cap, crit] = s;
+    const badges = k.split('').map((c) => '<span class="kb ' + KIND[c][1] + '">' + KIND[c][0] + '</span>').join('');
+    let critHtml = '';
+    if (crit) {
+      const n = crit.split('').filter((c) => c === '1').length;
+      critHtml = '<div class="fw-crit">' + CRIT.map((c, i) => '<span class="cr' + (crit[i] === '1' ? ' on' : '') + '">' + c + '</span>').join('') +
+        '<b class="' + (n >= 3 ? 'ok' : '') + '">' + n + ' of 6' + (n >= 3 ? ' · a specific claim' : ' · below the bar of 3') + '</b></div>';
+    }
+    const capTxt = cap === 'u' ? '<span class="kc">current use</span>' : cap === 'i' ? '<span class="kc">intention</span>' : '';
+    return '<div class="m-sent fw-card"><div class="fw-badges">' + badges + capTxt + '<span class="fw-sec">' + (SECTION[sec] || sec) + '</span></div>' +
+      '<div class="m-txt">' + hl(t) + '</div>' + critHtml +
+      (url ? '<div class="m-foot"><a target="_blank" rel="noopener" href="' + fragLink(url, t) + '">open at this sentence ↗</a></div>' : '') + '</div>';
+  }
+
+  // ---------------------------------------------------------------- resources beside the sentences
+  function miniLine(xs, ys, med, sel, color, fmt) {
+    const W = 260, H = 64, L = 4, R = 6, T = 8, B = 16;
+    const all = ys.concat(med).filter((v) => v != null);
+    if (!all.length) return '';
+    const max = Math.max(...all, 1e-9), x = (i) => L + (i / Math.max(1, xs.length - 1)) * (W - L - R), y = (v) => T + (1 - v / max) * (H - T - B);
+    const path = (vals) => {
+      let d = '', pen = false;
+      vals.forEach((v, i) => { if (v == null) { pen = false; return; } d += (pen ? ' L' : ' M') + x(i).toFixed(1) + ',' + y(v).toFixed(1); pen = true; });
+      return d;
+    };
+    const dots = ys.map((v, i) => v == null ? '' : '<circle cx="' + x(i).toFixed(1) + '" cy="' + y(v).toFixed(1) + '" r="' + (xs[i] === sel ? 4 : 2) +
+      '" fill="' + (xs[i] === sel ? color : '#fff') + '" stroke="' + color + '" stroke-width="1.4"><title>FY' + xs[i] + ' 10-K: ' + fmt(v) + '</title></circle>').join('');
+    return '<svg class="fw-mini" viewBox="0 0 ' + W + ' ' + H + '">' +
+      '<path d="' + path(med) + '" fill="none" stroke="#9a9a9a" stroke-width="1.2" stroke-dasharray="3 3"/>' +
+      '<path d="' + path(ys) + '" fill="none" stroke="' + color + '" stroke-width="1.8" stroke-linejoin="round"/>' + dots +
+      '<text x="' + L + '" y="' + (H - 3) + '" class="fw-ax">' + xs[0] + '</text>' +
+      '<text x="' + (W - R) + '" y="' + (H - 3) + '" class="fw-ax" text-anchor="end">' + xs[xs.length - 1] + '</text></svg>';
+  }
+  function miniBars(xs, series, sel) {
+    const W = 260, H = 64, B = 16, T = 6, n = xs.length, bw = (W - 8) / n;
+    const tot = xs.map((_, i) => series.reduce((a, s) => a + (s.v[i] || 0), 0));
+    const max = Math.max(...tot, 1);
+    let h = '';
+    xs.forEach((yr, i) => {
+      let y0 = H - B;
+      series.forEach((s) => {
+        const v = s.v[i] || 0; if (!v) return;
+        const hh = (v / max) * (H - B - T);
+        h += '<rect x="' + (4 + i * bw + 1).toFixed(1) + '" y="' + (y0 - hh).toFixed(1) + '" width="' + (bw - 2).toFixed(1) + '" height="' + hh.toFixed(1) +
+          '" fill="' + s.c + '" opacity="' + (yr === sel ? 1 : .55) + '"><title>FY' + yr + ' 10-K: ' + v + ' ' + s.n + '</title></rect>';
+        y0 -= hh;
+      });
+      if (yr === sel) h += '<rect x="' + (4 + i * bw).toFixed(1) + '" y="' + T + '" width="' + bw.toFixed(1) + '" height="' + (H - B - T) + '" fill="none" stroke="#333" stroke-width=".8" stroke-dasharray="2 2"/>';
+    });
+    return '<svg class="fw-mini" viewBox="0 0 ' + W + ' ' + H + '">' + h +
+      '<text x="4" y="' + (H - 3) + '" class="fw-ax">' + xs[0] + '</text><text x="' + (W - 4) + '" y="' + (H - 3) + '" class="fw-ax" text-anchor="end">' + xs[n - 1] + '</text></svg>';
+  }
+  function rank(p, ind) {
+    if (p == null) return '';
+    const v = Math.round(p * 100);
+    return '<div class="fw-rank"><div class="fw-track"><i style="left:' + v + '%"></i></div><span>higher than <b>' + v + '%</b> of ' +
+      esc(ind) + ' firms with data in the same 10-K year</span></div>';
+  }
+  function resourcesHtml(f, fy, rows) {
+    const by = {}; rows.forEach((r) => (by[r[0]] = r));
+    const r = by[fy], xs = rows.map((q) => q[0]);
+    const med = (k) => xs.map((yr) => { const m = FS.SY.med[f.ind] && FS.SY.med[f.ind][String(yr)]; return m ? m[k] : null; });
+    const m = (FS.SY.med[f.ind] || {})[String(fy)] || [];
+    const prior = fy - 1;
+    if (!r) return '<p class="m-note">No resource data for this firm-year.</p>';
+    const [, , rd, rev, emp, rdr, rdp, aip, pat, stock, stp, aiw, awp, suits] = r;
+    const lastAiw = (() => { for (let i = rows.length - 1; i >= 0; i--) if (rows[i][11] != null && rows[i][0] <= fy) return rows[i]; return null; })();
+    const yrsUpTo = xs;
+    const dis = f.years;
+    const dxs = dis.map((y) => y[0]);
+    const block = (title, sym, body) => '<div class="fw-rb"><h5>' + title + ' <span>' + sym + '</span></h5>' + body + '</div>';
+    let h = '<h4 class="fw-res-h">Resources behind this 10-K</h4><p class="fw-res-sub">Measured in FY' + prior +
+      ', the fiscal year before the filing, as in the models; the dashed line is the ' + esc(f.ind) + ' median.</p>';
+    // R&D intensity
+    h += block('R&amp;D intensity', 'R₁',
+      (rdr == null ? '<p class="fw-big na">not reported</p>'
+        : '<p class="fw-big">' + pctTxt(rdr) + '<small> of revenue</small></p>' +
+          '<p class="fw-line">R&amp;D ' + money(rd) + ' on revenue of ' + money(rev) + ' in FY' + prior + (rdr >= 1 ? ' (capped at 100% in the models)' : '') +
+          '; sector median ' + pctTxt(m[0]) + '.</p>' + rank(rdp, f.ind)) +
+      miniLine(yrsUpTo, rows.map((q) => q[5]), med(0), fy, '#0b3d5c', (v) => pctTxt(v)));
+    // AI patents
+    h += block('AI patent portfolio', 'R₂',
+      (stock == null ? '<p class="fw-big na">not available</p>'
+        : '<p class="fw-big">' + (stock >= 10 ? fmtInt(Math.round(stock)) : stock.toFixed(1)) + '<small> AI patents in the portfolio</small></p>' +
+          '<p class="fw-line">' + (aip == null ? 'Grants for FY' + prior + ' are not yet in the patent data' : fmtInt(aip) + ' AI patent' + (aip === 1 ? '' : 's') + ' granted in FY' + prior +
+          (pat ? ', ' + pctTxt(aip / pat, 0) + ' of the firm’s ' + fmtInt(pat) + ' patents' : '')) +
+          '. The portfolio adds every AI patent granted to the firm, losing 15% of its weight each year; sector median ' + (m[1] == null ? 'n/a' : m[1].toFixed(1)) + '.</p>' +
+          rank(stp, f.ind)) +
+      miniLine(yrsUpTo, rows.map((q) => q[9]), med(1), fy, '#6a51a3', (v) => v.toFixed(1)));
+    // AI workforce
+    const awRow = aiw != null ? r : lastAiw;
+    h += block('AI workforce', 'R₃',
+      (awRow == null ? '<p class="fw-big na">not available</p><p class="fw-line">The AI-worker data reach the 10-Ks of fiscal year 2022 (measured in FY2021).</p>'
+        : '<p class="fw-big">' + (awRow[11] * 1000).toFixed(awRow[11] * 1000 >= 10 ? 0 : 1) + '<small> of every 1,000 employees in AI roles</small></p>' +
+          '<p class="fw-line">An AI-worker share of ' + pctTxt(awRow[11], 2) + ' in FY' + (awRow[0] - 1) +
+          (awRow === r ? '' : ', the latest year the AI-worker data cover') +
+          (awRow[4] ? '; the firm reported ' + fmtInt(awRow[4]) + ' employees that year' : '') + '.</p>' + (awRow === r ? rank(awp, f.ind) : '')) +
+      miniLine(yrsUpTo, rows.map((q) => q[11]), med(2), fy, '#1f8a70', (v) => pctTxt(v, 2)));
+    // litigation
+    h += block('Litigation exposure', 'L',
+      '<p class="fw-big">' + pctTxt(m[3]) + '<small> of ' + esc(f.ind) + ' firms sued</small></p>' +
+      '<p class="fw-line">Share of the sector’s firms named in a securities class action in the calendar year before this filing. ' +
+      (suits ? 'This company had been named in ' + fmtInt(suits) + ' securities class action' + (suits === 1 ? '' : 's') + ' before this filing.' : 'This company had not been named in one before this filing.') + '</p>');
+    // disclosure over time
+    h += block('AI disclosure in this firm’s 10-Ks', 'C, G, F',
+      '<p class="fw-line">Sentences per filing: <i class="sw k-c"></i>specific claims <i class="sw k-g"></i>generic risk <i class="sw k-f"></i>firm-specific risk.</p>' +
+      miniBars(dxs, [{ n: 'specific claims', c: '#111111', v: dis.map((y) => y[3]) }, { n: 'generic risk', c: '#c8641e', v: dis.map((y) => y[4]) },
+        { n: 'firm-specific risk', c: '#6a51a3', v: dis.map((y) => y[5]) }], fy));
+    return h;
+  }
+
+  // ---------------------------------------------------------------- the tour
+  const TOUR = { on: false, timers: [], i: 0, stops: null, cell: null };
+  function tourStops() {
+    if (TOUR.stops) return TOUR.stops;
+    TOUR.stops = Object.keys(SLUG).map((ind) => {
+      let best = null;
+      FS.F.forEach((f) => {
+        if (f.ind !== ind) return;
+        f.years.forEach((y) => { if (y[1] && y[3] > 0 && (!best || y[3] > best.n || (y[3] === best.n && y[0] > best.fy))) best = { cik: f.cik, fy: y[0], n: y[3], ind }; });
+      });
+      return best;
+    }).filter(Boolean);
+    return TOUR.stops;
+  }
+  const later = (ms, fn) => TOUR.timers.push(setTimeout(fn, ms));
+  function pill() {
+    const b = $('#inv-tour');
+    if (!b) return;
+    b.classList.toggle('on', TOUR.on);
+    b.querySelector('.tp-t').textContent = TOUR.on ? 'Pause tour' : 'Play tour';
+  }
+  function startTour() {
+    if (REDUCED || TOUR.on || !FS.F) return;
+    TOUR.on = true; pill();
+    ['pointerdown', 'keydown', 'wheel', 'touchstart'].forEach((ev) => window.addEventListener(ev, userTakesOver, { capture: true, passive: true }));
+    tourStep();
+  }
+  function userTakesOver(e) {
+    if (!e.isTrusted || !TOUR.on) return;
+    if (e.target && e.target.closest && e.target.closest('#inv-tour')) return;   // the pill toggles on its own
+    const inWindow = WIN && (e.type === 'keydown' || (e.target && e.target.closest && e.target.closest('.fw')));
+    stopTour(inWindow ? 'keep' : null);
+  }
+  function stopTour(keep) {
+    if (!TOUR.on) return;
+    TOUR.on = false;
+    TOUR.timers.forEach(clearTimeout); TOUR.timers = [];
+    ['pointerdown', 'keydown', 'wheel', 'touchstart'].forEach((ev) => window.removeEventListener(ev, userTakesOver, { capture: true }));
+    if (TOUR.cell) TOUR.cell.classList.remove('tour-hit');
+    if (WIN) { if (keep === 'keep') WIN.tour = false; else closeWindow(); }
+    const bar = $('#inv-tour .tp-bar'); if (bar) { bar.style.transition = 'none'; bar.style.width = '0'; }
+    pill();
+  }
+  function tourStep() {
+    if (!TOUR.on) return;
+    const stops = tourStops(); if (!stops.length) return;
+    const s = stops[TOUR.i % stops.length]; TOUR.i += 1;
+    closeWindow();
+    $('#inv-search').value = ''; $('#inv-c').checked = false;
+    if ($('#inv-ind').value !== s.ind) { $('#inv-ind').value = s.ind; FS.render(); }
+    const cell = $('#inv-grid a.inv-cell[data-cik="' + s.cik + '"][data-fy="' + s.fy + '"]');
+    if (TOUR.cell) TOUR.cell.classList.remove('tour-hit');
+    TOUR.cell = cell;
+    const STEP = 9500;
+    const bar = $('#inv-tour .tp-bar');
+    if (bar) { bar.style.transition = 'none'; bar.style.width = '0'; void bar.offsetWidth; bar.style.transition = 'width ' + STEP + 'ms linear'; bar.style.width = '100%'; }
+    if (cell) { cell.closest('.inv-row').scrollIntoView({ block: 'center', behavior: 'smooth' }); cell.classList.add('tour-hit'); }
+    later(1300, () => openFiling(s.cik, s.fy, { tour: true }));
+    later(STEP, () => { if (cell) cell.classList.remove('tour-hit'); tourStep(); });
+  }
+  function tourScroll(list) {
+    if (!list) return;
+    const target = list.querySelector('.fw-group[data-k="G"], .fw-group[data-k="F"]');
+    if (!target) return;
+    later(4200, () => { if (WIN && WIN.tour) list.scrollTo({ top: target.offsetTop - list.offsetTop - 8, behavior: 'smooth' }); });
+  }
+  const leaveFilings = () => { stopTour(null); closeWindow(); };
 
   // ============================================================== METHOD
   // What each variable is: the raw material it starts as, its source, and its distribution over

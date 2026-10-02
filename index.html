@@ -8,9 +8,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=12">
-<link rel="preload" href="data/headline.json?v=12" as="fetch" crossorigin>
-<link rel="preload" href="data/hero.json?v=12" as="fetch" crossorigin>
+<link rel="stylesheet" href="css/style.css?v=13">
+<link rel="preload" href="data/headline.json?v=13" as="fetch" crossorigin>
+<link rel="preload" href="data/hero.json?v=13" as="fetch" crossorigin>
 </head>
 <body>
 
@@ -193,13 +193,20 @@
   <section id="view-filings" class="view" hidden>
     <div class="hero">
       <h1>The filings <em>behind the measures</em></h1>
-      <p class="lede">
-        One square per firm-year, colored by its coded AI disclosure. Hovering a square shows the
-        filing's highest-scoring coded sentence, the top specific capability claim where one
-        exists; clicking a square opens that 10-K on sec.gov, and clicking a company name shows
-        the firm's disclosure and resource series: R&amp;D / revenue, AI patent stock, and the
-        AI-worker share. Search covers all nine sectors.
-      </p>
+      <ul class="guide">
+        <li><b>Each row is a company and each square one annual report (10-K),</b> colored by the
+          specific AI capability claims it contains.</li>
+        <li><b>Click a square</b> to open that report in a window: every AI sentence the three
+          coders found, grouped by type with its six specificity criteria, beside the firm&rsquo;s
+          R&amp;D, AI patents, AI workforce and litigation exposure.</li>
+        <li><b>Click a company name</b> to open its most recent report with AI sentences; inside the
+          window, the year buttons or the &larr; &rarr; keys move between its reports.</li>
+        <li><b>Hover a square</b> for a one-line preview; Ctrl-click (&#8984;-click on a Mac) opens the
+          10-K itself on sec.gov.</li>
+        <li><b>Search</b> finds a company in any of the nine sectors; the menu switches sectors.</li>
+        <li><b>A short tour plays when this tab opens.</b> Click anywhere to stop it and explore, or
+          press Play tour to watch it again.</li>
+      </ul>
     </div>
     <div class="card">
       <div class="toolbar">
@@ -208,6 +215,7 @@
         <select id="inv-ind" aria-label="Sector"></select>
         <label class="chk"><input type="checkbox" id="inv-c"> Only firms with a specific claim</label>
         <span class="count" id="inv-count"></span>
+        <button id="inv-tour" class="inv-tour" type="button"><span class="tp-t">Play tour</span><span class="tp-bar"></span></button>
       </div>
       <div class="legend inv-legend">
         <span><i style="background:var(--surface);box-shadow:inset 0 0 0 1px var(--line-2)"></i>filed, outside the operating screen that year</span>
@@ -216,7 +224,6 @@
         <span><i style="background:var(--s3)"></i>1&ndash;2 specific claims</span>
         <span><i style="background:var(--s5)"></i>3 or more specific claims</span>
       </div>
-      <div id="firm-panel" class="firmpanel" hidden></div>
       <div id="inv-grid" class="inv"><p class="m-note">Loading the filings grid&hellip;</p></div>
     </div>
   </section>
@@ -291,8 +298,8 @@
 
 </main>
 
-<script src="js/charts.js?v=12"></script>
-<script src="js/hero.js?v=12"></script>
-<script src="js/app.js?v=12"></script>
+<script src="js/charts.js?v=13"></script>
+<script src="js/hero.js?v=13"></script>
+<script src="js/app.js?v=13"></script>
 </body>
 </html>
