@@ -1,5 +1,5 @@
 /* ============================================================================
-   Backed Claims: AI resources and AI talk in US 10-Ks (Paper A companion).
+   Backed Claims: resources as evidence for corporate AI capability (Paper A companion).
 
    Every number on the site is read from data/*.json, which build_data.py bakes
    from the analysis outputs. Nothing is typed in here except words.
@@ -8,7 +8,7 @@
   'use strict';
   const $ = (s) => document.querySelector(s);
   const $$ = (s) => Array.from(document.querySelectorAll(s));
-  const V = '?v=14';                                        // bump on each release: GitHub Pages caches hard
+  const V = '?v=15';                                        // bump on each release: GitHub Pages caches hard
   const J = (p) => fetch('data/' + p + V).then((r) => r.json());
   const REDUCED = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   function countTo(el, to, suffix) {                       // a stat tile counts up to its value once
@@ -825,7 +825,7 @@
         fields.map((f) => '<th class="num">' + (fname[f] || f) + '</th>').join('') + '</tr></thead><tbody>' +
         pairs.map((p) => '<tr><td>' + (name[p] || p) + '</td>' + fields.map((f) => {
           const r = A.find((x) => x.pair === p && x.field === f);
-          return '<td class="num">' + (r ? pct(r.agree, 1) : '—') + '</td>';
+          return '<td class="num">' + (r ? pct(r.agree, 1) : 'n/a') + '</td>';
         }).join('') + '</tr>').join('') + '</tbody></table></div>' +
         '<p class="note">Pairwise agreement of the three coders on every coded sentence; labels need 2-of-3.</p>';
     });
