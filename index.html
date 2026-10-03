@@ -8,9 +8,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=15">
-<link rel="preload" href="data/headline.json?v=15" as="fetch" crossorigin>
-<link rel="preload" href="data/hero.json?v=15" as="fetch" crossorigin>
+<link rel="stylesheet" href="css/style.css?v=16">
+<link rel="preload" href="data/headline.json?v=16" as="fetch" crossorigin>
+<link rel="preload" href="data/hero.json?v=16" as="fetch" crossorigin>
 </head>
 <body>
 
@@ -124,7 +124,7 @@
         <b>within firm</b> (firm and fiscal-year fixed effects, comparing a firm with itself as its
         resources change) and <b>between firms</b> (sector &times; fiscal-year fixed effects,
         comparing firms within the same sector and year). Bands and whiskers are 95% intervals
-        (estimate &plusmn; 1.96 standard errors, clustered by firm). All estimates are conditional
+        (estimate &plusmn; 1.96 standard errors, clustered by firm and sector-year; sector-specific estimates by firm). All estimates are conditional
         associations; disclosure is chosen, not assigned.
       </p>
     </div>
@@ -152,7 +152,7 @@
       <p class="sub">The resource slope on specific capability claims as litigation exposure rises
         (the share of the sector's firms named in securities class actions in the calendar year
         before the filing). Screening (H3a) predicts a rising slope, chilling (H3b) a falling one.
-        The AI patent slope falls in both designs; the R&amp;D slope rises within firm only.</p>
+        The AI patent slope falls in both designs and the R&amp;D slope rises within firm only, but both interactions are imprecise.</p>
       <div class="seg" id="h3-seg" role="group" aria-label="Design">
         <button data-fe="WITHIN" class="on">within firm</button>
         <button data-fe="BETWEEN">between firms</button>
@@ -258,7 +258,7 @@
         its resources change. Between firms: sector &times; year fixed effects, so a firm
         is compared with its sector peers in the same year. Controls at t-1: size,
         leverage, cash, capex, ROA, R&amp;D indicators and 10-K length at t. Standard
-        errors are clustered by firm. The operating screen keeps firms with at least $10M
+        errors are clustered by firm and by sector-year (sector-specific models: by firm). The operating screen keeps firms with at least $10M
         of assets or revenue and a 10-K of at least 5,000 words.</p>
       <h2>What this is not</h2>
       <p>A 10-K records what a firm chose to tell investors. Every result on this site is
@@ -297,8 +297,8 @@
 
 </main>
 
-<script src="js/charts.js?v=15"></script>
-<script src="js/hero.js?v=15"></script>
-<script src="js/app.js?v=15"></script>
+<script src="js/charts.js?v=16"></script>
+<script src="js/hero.js?v=16"></script>
+<script src="js/app.js?v=16"></script>
 </body>
 </html>

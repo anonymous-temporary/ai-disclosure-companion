@@ -8,7 +8,7 @@
   'use strict';
   const $ = (s) => document.querySelector(s);
   const $$ = (s) => Array.from(document.querySelectorAll(s));
-  const V = '?v=15';                                        // bump on each release: GitHub Pages caches hard
+  const V = '?v=16';                                        // bump on each release: GitHub Pages caches hard
   const J = (p) => fetch('data/' + p + V).then((r) => r.json());
   const REDUCED = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   function countTo(el, to, suffix) {                       // a stat tile counts up to its value once
@@ -190,11 +190,11 @@
        'Patents align with claims in sectors that develop AI internally; R&D where industry AI exposure is high.',
        'AI patent portfolio × internal AI development ' + pp(h2b) + ' | ' + pp(h2bB) +
        ' · R&D intensity × high industry AI exposure ' + pp(h2a) + ' | ' + pp(h2aB)],
-      ['ok', 'H3b chilling', scenes.h3b, 'Litigation cools the patent-backed claims',
-       'Where securities lawsuits are more common in a sector, the patent-claims association weakens.',
+      ['half', 'H3b chilling', scenes.h3b, 'Litigation may cool patent-backed claims',
+       'Where securities lawsuits are more common in a sector, the patent-claims association is weaker, but imprecisely estimated.',
        'AI patent portfolio × litigation exposure ' + pp(h3p) + ' | ' + pp(h3pB)],
       ['half', 'H3a screening', scenes.h3a, 'Little sign of screening',
-       'Litigation strengthens the R&D association only in the pooled within-firm model.',
+       'Litigation strengthens the R&D association only weakly, in the pooled within-firm model.',
        'R&D intensity × litigation exposure ' + pp(h3r) + ' within firm, but ' + pp(h3rB) + ' between firms and in no single sector'],
     ];
     $('#ov-verdicts').innerHTML = rows.map(([cls, tag, scene, title, plain, stat]) =>
