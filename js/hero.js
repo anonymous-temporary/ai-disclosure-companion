@@ -191,12 +191,12 @@
         } },
       { ms: 3200, run: function (sl) {
           setStage(2);
-          readout('Specific capability claims are rare', C.nC10k, fmtInt, '10-K filings contain at least one specific capability claim');
+          readout('Specific capability claims are uncommon', C.nC10k, fmtInt, '10-K filings contain at least one specific capability claim');
           return sl(3200);
         } },
       { ms: 4200, run: function (sl) {
           setStage(3);
-          readout('Claims concentrate where AI is developed internally', 23, fmtPct, 'of software 10-Ks contain a specific claim, against 2% in retail');
+          readout('Claims concentrate where AI is developed internally', C.cSoft, fmtPct, 'of software 10-Ks contain a specific claim, against ' + fmtPct(C.cRetail) + ' in retail');
           return sl(4200);
         } }
     ];
@@ -255,7 +255,7 @@
     global.addEventListener('resize', function () { build(); draw(Math.max(0, cur.stage), cur.sweep, 1); });
     if (reduced) {
       setStage(3);
-      readout('Claims concentrate where AI is developed internally', 23, fmtPct, 'of software 10-Ks contain a specific claim, against 2% in retail');
+      readout('Claims concentrate where AI is developed internally', C.cSoft, fmtPct, 'of software 10-Ks contain a specific claim, against ' + fmtPct(C.cRetail) + ' in retail');
     } else {
       setStage(0);
       play();

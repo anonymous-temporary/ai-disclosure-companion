@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Backed Claims: Resources as evidence for corporate AI capability</title>
-<meta name="description" content="Resources as evidence: legal accountability and the selective observability of corporate AI capability. Specific AI capability claims against R&D intensity, AI patent portfolios and the AI workforce share in 22,780 10-K filings across nine US sectors, fiscal years 2014 to 2025. Every number traces to a public SEC filing.">
+<meta name="description" content="Technological resources as evidence for corporate AI capability claims: industry context, legal accountability, and selective observability. Specific AI capability claims against R&D intensity, AI patent portfolios and the AI workforce share in 22,780 10-K filings across nine US sectors, fiscal years 2014 to 2025. Every number traces to a public SEC filing.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=17">
-<link rel="preload" href="data/headline.json?v=17" as="fetch" crossorigin>
-<link rel="preload" href="data/hero.json?v=17" as="fetch" crossorigin>
+<link rel="stylesheet" href="css/style.css?v=18">
+<link rel="preload" href="data/headline.json?v=18" as="fetch" crossorigin>
+<link rel="preload" href="data/hero.json?v=18" as="fetch" crossorigin>
 </head>
 <body>
 
@@ -21,7 +21,7 @@
     <div class="brand">
       <div>
         <div class="brand-t">Backed Claims</div>
-        <div class="brand-s">Resources as evidence: legal accountability and the selective observability of corporate AI capability</div>
+        <div class="brand-s">Technological resources as evidence for corporate AI capability claims: industry context, legal accountability, and selective observability</div>
       </div>
     </div>
     <nav id="nav" aria-label="Sections">
@@ -46,9 +46,9 @@
         AI patent portfolios, and the AI workforce share) as the evidence behind <b>specific AI
         capability claims</b>: sentences that describe the firm&rsquo;s own AI capability and satisfy
         at least three of six specificity criteria. The claims track these resources, more strongly
-        where a resource corresponds to how the industry develops AI. Disclosure nonetheless shows
-        capability selectively: where securities lawsuits are more common, the patent-claims
-        association weakens, so equally capable firms may disclose differently.
+        where a resource corresponds to how the industry develops AI. Litigation exposure does
+        not detectably change that link overall, although exploratory estimates point in opposite
+        directions in the two sectors where specific claims are most common.
       </p>
     </div>
 
@@ -70,7 +70,7 @@
       <div class="stat"><div class="v" id="ov-firms">&hellip;</div>
         <div class="k">firms in nine sectors</div></div>
       <div class="stat"><div class="v" id="ov-nai">&hellip;</div>
-        <div class="k">sentences about AI, classified by three language models</div></div>
+        <div class="k">sentences about AI, classified by four language models</div></div>
       <div class="stat accent"><div class="v" id="ov-nc">&hellip;</div>
         <div class="k">specific capability claims (at least three of six specificity criteria)</div></div>
     </div>
@@ -152,7 +152,7 @@
       <p class="sub">The resource slope on specific capability claims as litigation exposure rises
         (the share of the sector's firms named in securities class actions in the calendar year
         before the filing). Screening (H3a) predicts a rising slope, chilling (H3b) a falling one.
-        The AI patent slope falls in both designs and the R&amp;D slope rises within firm only, but both interactions are imprecise.</p>
+        In the pooled models the evidence is inconclusive: the interactions for both resources are imprecise, and the slopes stay close to flat.</p>
       <div class="seg" id="h3-seg" role="group" aria-label="Design">
         <button data-fe="WITHIN" class="on">within firm</button>
         <button data-fe="BETWEEN">between firms</button>
@@ -162,15 +162,20 @@
 
     <div class="card">
       <h2>Resource and litigation associations by sector</h2>
-      <p class="sub">The resource slope estimated separately for each sector, drawn where at least
-        20 firms hold the resource. Green: sectors classified as developing AI internally; amber:
+      <p class="sub">The resource slope, or its interaction with litigation exposure (per standard deviation
+        of exposure), estimated separately for each sector and drawn where at least 20 firms hold
+        the resource. The sector interactions are exploratory. Green: sectors classified as developing AI internally; amber:
         sectors that obtain AI externally. Hover for the estimate, p-value and firm count; the Wald
-        test assesses whether the drawn slopes are equal.</p>
+        test assesses whether the drawn estimates are equal.</p>
       <div class="seg" id="sl-seg" role="group" aria-label="Resource and design">
         <button data-res="log AI patent stock" data-fe="WITHIN" class="on">AI patents &middot; within</button>
         <button data-res="log AI patent stock" data-fe="BETWEEN">AI patents &middot; between</button>
         <button data-res="R&D / revenue" data-fe="WITHIN">R&amp;D &middot; within</button>
         <button data-res="R&D / revenue" data-fe="BETWEEN">R&amp;D &middot; between</button>
+      </div>
+      <div class="seg" id="sl-kind" role="group" aria-label="Estimate">
+        <button data-kind="slope" class="on">resource slope</button>
+        <button data-kind="x suit rate">&times; litigation exposure</button>
       </div>
       <div id="ch-slopes" class="chart"></div>
       <p class="note" id="sl-note"></p>
@@ -198,8 +203,8 @@
       <ul class="guide">
         <li><b>Each row is a company and each square one annual report (10-K),</b> colored by the
           specific AI capability claims it contains.</li>
-        <li><b>Click a square</b> to open that report in a window: every AI sentence the three
-          coders found, grouped by type with its six specificity criteria, beside the firm&rsquo;s
+        <li><b>Click a square</b> to open that report in a window: every AI sentence the four
+          coders classified, grouped by type with its six specificity criteria, beside the firm&rsquo;s
           R&amp;D, AI patents, AI workforce and litigation exposure.</li>
         <li><b>Click a company name</b> to open its most recent report with AI sentences; inside the
           window, the year buttons or the &larr; &rarr; keys move between its reports.</li>
@@ -244,11 +249,13 @@
       <h2>From text to variables</h2>
       <p>A lexicon of 13 AI term families (period-consistent, so the post-2022 jump is
         not manufactured by today's vocabulary) pulls every AI-term sentence with its
-        neighbors. Three open-weight language models from three labs (Alibaba, Mistral AI,
-        Microsoft) code each sentence locally: is it about AI, does it claim a capability,
+        neighbors. Four language models from four labs (Anthropic, Alibaba, Mistral AI,
+        Microsoft) code each sentence: is it about AI, does it claim a capability,
         which of six specificity points does it meet (action, use case, named product,
         number, date or stage, verifiable detail), and is it generic or firm-specific AI
-        risk? A label needs 2-of-3 agreement.
+        risk? The four models vote on the type of each sentence (about AI, capability
+        statement, risk language): a type needs three of the four votes, or two including
+        Claude Sonnet 5.5, which then supplies the specificity points and the kind of risk.
         A capability sentence with 3 or more points is a <b>specific capability claim
         (C)</b>; risk sentences become <b>generic (G)</b> or <b>firm-specific (F)</b> AI
         risk. Counts are scaled per 10,000 words of filing text.</p>
@@ -280,7 +287,7 @@
 
     <div class="card">
       <h2>Apply the specificity criteria</h2>
-      <p class="sub">The study's coders are three language models reading with a codebook; this
+      <p class="sub">The study's coders are four language models reading with a codebook; this
         panel approximates the six specificity criteria with pattern rules to illustrate what
         "specific" means. Paste an AI sentence from any annual report, or load an example.</p>
       <div class="scorer">
@@ -297,8 +304,8 @@
 
 </main>
 
-<script src="js/charts.js?v=17"></script>
-<script src="js/hero.js?v=17"></script>
-<script src="js/app.js?v=17"></script>
+<script src="js/charts.js?v=18"></script>
+<script src="js/hero.js?v=18"></script>
+<script src="js/app.js?v=18"></script>
 </body>
 </html>

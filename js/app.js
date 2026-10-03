@@ -8,7 +8,7 @@
   'use strict';
   const $ = (s) => document.querySelector(s);
   const $$ = (s) => Array.from(document.querySelectorAll(s));
-  const V = '?v=17';                                        // bump on each release: GitHub Pages caches hard
+  const V = '?v=18';                                        // bump on each release: GitHub Pages caches hard
   const J = (p) => fetch('data/' + p + V).then((r) => r.json());
   const REDUCED = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   function countTo(el, to, suffix) {                       // a stat tile counts up to its value once
@@ -71,14 +71,14 @@
 
   // ============================================================== OVERVIEW
   function initOverview() {
-    need(['headline', 'models', 'diffusion', 'hero'], ({ headline: H, models: M, diffusion: D, hero: HR }) => {
+    need(['headline', 'models', 'diffusion', 'hero', 'slopes'], ({ headline: H, models: M, diffusion: D, hero: HR, slopes: SLO }) => {
       if (window.Hero) Hero.init(HR);
       countTo($('#ov-n10k'), H.n10k);
       $('#ov-span').textContent = 'FY' + H.fy0 + '-' + H.fy1;
       countTo($('#ov-firms'), H.firms);
       countTo($('#ov-nai'), H.nai);
       countTo($('#ov-nc'), H.nC);
-      verdicts(M);
+      verdicts(M, SLO);
       outcomeGrid(M);
       const seg = $('#ov-seg');
       seg.addEventListener('click', (e) => {
@@ -125,7 +125,7 @@
     host.querySelectorAll('.og-cell').forEach((c, i) => { c.style.animationDelay = (200 + i * 90) + 'ms'; c.classList.add('pop'); });
   }
 
-  function verdicts(M) {
+  function verdicts(M, SLO) {
     const rd = ['H1 L1_RD_SALES0', 'L1_RD_SALES0'], ap = ['H1 L1_LOG_AI_PAT_STOCK', 'L1_LOG_AI_PAT_STOCK'];
     const h2a = est(M, 'H2 L1_RD_SALES0 x HIGH_AIIE', 'RxM', 'WITHIN'), h2aB = est(M, 'H2 L1_RD_SALES0 x HIGH_AIIE', 'RxM', 'BETWEEN');
     const h2b = est(M, 'H2 L1_LOG_AI_PAT_STOCK x INTERNAL_DEV', 'RxM', 'WITHIN'), h2bB = est(M, 'H2 L1_LOG_AI_PAT_STOCK x INTERNAL_DEV', 'RxM', 'BETWEEN');
@@ -181,6 +181,18 @@
            '<g class="a-scan" ' + FO + '><circle cx="99" cy="30" r="11" fill="none" stroke="#333" stroke-width="2"/>' +
            '<line x1="107" y1="38" x2="116" y2="47" stroke="#333" stroke-width="3" stroke-linecap="round"/></g></svg>',
     };
+    // the pooled litigation result (a flat, dashed path under the magnifier) and the two sectors that split
+    scenes.h3 = '<svg class="vscene" viewBox="0 0 220 76">' + block(8, 28, 'resources') +
+      '<g opacity=".4"><line x1="62" y1="36" x2="136" y2="36" stroke="#3a3a3a" stroke-width="1.6" stroke-dasharray="5 4"/>' +
+      '<path d="M136,31 l9,5 l-9,5 z" fill="#3a3a3a"/></g>' + bubble(146, 22, 'specific claims', '') +
+      '<g class="a-scan" ' + FO + '><circle cx="99" cy="30" r="11" fill="none" stroke="#333" stroke-width="2"/>' +
+      '<line x1="107" y1="38" x2="116" y2="47" stroke="#333" stroke-width="3" stroke-linecap="round"/></g></svg>';
+    scenes.h3s = '<svg class="vscene" viewBox="0 0 220 76">' + block(8, 10, 'software') + block(8, 48, 'chips') +
+      '<text x="99" y="25" text-anchor="middle" font-size="17" font-weight="700" fill="#3b7d3b">+</text>' +
+      '<g class="a-snow" ' + FO + '>' + flake(99, 57, 9) + '</g>' + bubble(146, 22, 'specific claims', '') + '</svg>';
+    const secL = (ind) => SLO.find((s) => s.resource === 'log AI patent stock' && s.fe === 'BETWEEN' && s.spec === 'H3 slopes' &&
+                                          s.kind === 'x suit rate' && s.industry === ind);
+    const swL = secL('Software & IT services'), chL = secL('Computers & chips');
     const rows = [
       ['ok', 'H1 alignment', scenes.h1, 'Resources back the claims',
        'Firms with more R&D and larger AI patent portfolios make more specific AI capability claims.',
@@ -190,12 +202,13 @@
        'Patents align with claims in sectors that develop AI internally; R&D where industry AI exposure is high.',
        'AI patent portfolio × internal AI development ' + pp(h2b) + ' | ' + pp(h2bB) +
        ' · R&D intensity × high industry AI exposure ' + pp(h2a) + ' | ' + pp(h2aB)],
-      ['half', 'H3b chilling', scenes.h3b, 'Litigation may cool patent-backed claims',
-       'Where securities lawsuits are more common in a sector, the patent-claims association is weaker, but imprecisely estimated.',
-       'AI patent portfolio × litigation exposure ' + pp(h3p) + ' | ' + pp(h3pB)],
-      ['half', 'H3a screening', scenes.h3a, 'Little sign of screening',
-       'Litigation strengthens the R&D association only weakly, in the pooled within-firm model.',
-       'R&D intensity × litigation exposure ' + pp(h3r) + ' within firm, but ' + pp(h3rB) + ' between firms and in no single sector'],
+      ['half', 'H3a and H3b, pooled', scenes.h3, 'No net effect of litigation exposure',
+       'Across the nine sectors, litigation exposure does not detectably strengthen or weaken the link between resources and claims.',
+       'AI patent portfolio × litigation exposure ' + pp(h3p) + ' | ' + pp(h3pB) +
+       ' · R&D intensity × litigation exposure ' + pp(h3r) + ' | ' + pp(h3rB)],
+      ['half', 'H3a and H3b, by sector', scenes.h3s, 'Two sectors, two directions',
+       'Between firms, the patent-claims link strengthens with litigation exposure in software and weakens in computers and chips (exploratory).',
+       'AI patent portfolio × litigation exposure, between firms: software ' + pp(swL) + ' · computers and chips ' + pp(chL)],
     ];
     $('#ov-verdicts').innerHTML = rows.map(([cls, tag, scene, title, plain, stat]) =>
       '<div class="verdict ' + cls + '" role="button" tabindex="0" title="Open the Findings view">' +
@@ -316,9 +329,16 @@
       sseg.addEventListener('click', (e) => {
         const b = e.target.closest('button'); if (!b) return;
         sseg.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b));
-        slopeChart(M, SL, b.dataset.res, b.dataset.fe);
+        slopeChart(M, SL, b.dataset.res, b.dataset.fe, $('#sl-kind button.on').dataset.kind);
       });
-      slopeChart(M, SL, 'log AI patent stock', 'WITHIN');
+      const kseg = $('#sl-kind');
+      kseg.addEventListener('click', (e) => {
+        const b = e.target.closest('button'); if (!b) return;
+        kseg.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b));
+        const r = $('#sl-seg button.on');
+        slopeChart(M, SL, r.dataset.res, r.dataset.fe, b.dataset.kind);
+      });
+      slopeChart(M, SL, 'log AI patent stock', 'WITHIN', 'slope');
     });
   }
 
@@ -383,23 +403,30 @@
     });
   }
 
-  function slopeChart(M, SL, res, fe) {
-    const rows = SL.filter((s) => s.resource === res && s.fe === fe && s.spec === 'H1 slopes' &&
-                                  s.kind === 'slope' && s.firms >= 20 && s.industry !== 'All sectors')
+  function slopeChart(M, SL, res, fe, kind) {
+    // kind 'slope': the resource slope of each sector; 'x suit rate': its interaction with litigation exposure,
+    // rescaled to one standard deviation of exposure as in the paper's figure (per_sd_suit / coef is that deviation)
+    const lit = kind === 'x suit rate', spec = lit ? 'H3 slopes' : 'H1 slopes';
+    const rows = SL.filter((s) => s.resource === res && s.fe === fe && s.spec === spec &&
+                                  s.kind === (lit ? 'x suit rate' : 'slope') && s.firms >= 20 && s.industry !== 'All sectors')
       .sort((a, b) => b.coef - a.coef)
-      .map((s) => ({ label: s.industry, points: [{
-        est: s.coef, se: s.se, name: s.mode === 'in-house' ? 'develops AI internally' : 'obtains AI externally',
-        color: s.mode === 'in-house' ? '--c2' : '--c3',
-        tip: 'slope ' + s.coef.toFixed(3).replace(/^(-?)0\./, '$1.') + ', p ' + pfmt(s.p) +
-             '<br>' + fmtInt(s.firms) + ' firms hold the resource' }] }));
+      .map((s) => {
+        const k = lit ? s.per_sd_suit / s.coef : 1, d = lit ? 4 : 3;
+        return { label: s.industry, points: [{
+          est: s.coef * k, se: s.se * Math.abs(k), name: s.mode === 'in-house' ? 'develops AI internally' : 'obtains AI externally',
+          color: s.mode === 'in-house' ? '--c2' : '--c3',
+          tip: (lit ? 'change in slope per SD of litigation exposure ' : 'slope ') + (s.coef * k).toFixed(d).replace(/^(-?)0\./, '$1.') +
+               ', p ' + pfmt(s.p) + '<br>' + fmtInt(s.firms) + ' firms hold the resource' }] };
+      });
     C.forest($('#ch-slopes'), { rows, w: 760, labelW: 170, rowH: 30, xFmt: (t) => String(t).replace(/^(-?)0\./, '$1.') });
     C.legend($('#ch-slopes'), [{ name: 'develops AI internally', color: '--c2' }, { name: 'obtains AI externally', color: '--c3' }]);
     need(['models'], ({ models: MM }) => {
-      const wd = MM.wald.filter((w) => w.resource === res && w.spec === 'H1 slopes' && w.kind === 'slope');
+      const wd = MM.wald.filter((w) => w.resource === res && w.spec === spec && w.kind === (lit ? 'x suit rate' : 'slope'));
       const one = wd.find((w) => w.fe === fe);
       $('#sl-note').textContent = one
-        ? 'Sectors drawn: at least 20 firms hold the resource. Wald test that the drawn slopes are equal, this design: p ' +
-          pfmt(one.p) + ' across ' + one.industries + ' sectors.'
+        ? 'Sectors drawn: at least 20 firms hold the resource. Wald test that the drawn ' + (lit ? 'interactions' : 'slopes') +
+          ' are equal, this design: p ' + pfmt(one.p) + ' across ' + one.industries + ' sectors.' +
+          (lit ? ' The sector interactions are exploratory.' : '')
         : '';
     });
   }
@@ -622,7 +649,7 @@
     return filters + GROUP_ORDER.filter((k) => groups[k].length).map((k) =>
       '<div class="fw-group" data-k="' + k + '"><h4 class="' + KIND[k][1] + '">' + GROUP_TITLE[k] + ' <span>' + groups[k].length + '</span></h4>' +
       groups[k].map((s) => card(s, rec.u)).join('') + '</div>').join('') +
-      '<p class="m-note">Each sentence is shown as the three language models coded it (a label needs two of three votes). ' +
+      '<p class="m-note">Each sentence is shown as the four language models coded it. ' +
       'Links jump to the sentence in the 10-K where the browser can find it.</p>';
   }
   function card(s, url) {
@@ -746,7 +773,7 @@
   const VARMETA = {
     C: { name: 'Specific capability claims (C)', raw: '10-K sentences',
          unit: 'sentences per 10,000 words',
-         src: 'Sentences of the filing, classified by the three coders: a claim describes the firm’s own AI capability and meets at least 3 of 6 specificity criteria.' },
+         src: 'Sentences of the filing, classified by the four coders: a claim describes the firm’s own AI capability and meets at least 3 of 6 specificity criteria.' },
     G: { name: 'Generic AI risk (G)', raw: '10-K sentences',
          unit: 'sentences per 10,000 words',
          src: 'Boilerplate AI risk language that could appear in almost any firm’s filing.' },
@@ -816,23 +843,23 @@
   function initMethod() {
     need(['agreement', 'variables'], ({ agreement: A, variables: VB }) => {
       varCards(VB);
-      const fields = Array.from(new Set(A.map((r) => r.field)));
-      const pairs = Array.from(new Set(A.map((r) => r.pair))).filter((p) => p !== 'no_majority');
-      const name = { 'ministral-phi4': 'Ministral × Phi-4', 'ministral-qwen': 'Ministral × Qwen',
-                     'phi4-qwen': 'Phi-4 × Qwen', unanimous: 'all three agree' };
-      const fname = { about: 'about AI?', cap: 'capability', risk: 'risk kind', tone: 'tone', spec: 'specificity' };
-      $('#agree-tbl').innerHTML = '<div class="tablewrap"><table class="data"><thead><tr><th>coder pair</th>' +
-        fields.map((f) => '<th class="num">' + (fname[f] || f) + '</th>').join('') + '</tr></thead><tbody>' +
-        pairs.map((p) => '<tr><td>' + (name[p] || p) + '</td>' + fields.map((f) => {
-          const r = A.find((x) => x.pair === p && x.field === f);
-          return '<td class="num">' + (r ? pct(r.agree, 1) : 'n/a') + '</td>';
-        }).join('') + '</tr>').join('') + '</tbody></table></div>' +
-        '<p class="note">Pairwise agreement of the three coders on every coded sentence; labels need 2-of-3.</p>';
+      const fname = { 'about AI': 'about AI', 'capability statement': 'capability statement', 'risk language': 'AI risk language' };
+      $('#agree-tbl').innerHTML = '<div class="tablewrap"><table class="data"><thead><tr><th>sentence type</th>' +
+        '<th class="num">final label shared by at least three of the four models</th></tr></thead><tbody>' +
+        A.shared.map((r) => '<tr><td>' + (fname[r.field] || r.field) + '</td><td class="num">' + pct(r.share, 0) + '</td></tr>').join('') +
+        '</tbody></table></div>' +
+        '<div class="tablewrap"><table class="data"><thead><tr><th>measure</th><th class="num">agreement</th>' +
+        '<th class="num">Cohen’s κ</th></tr></thead><tbody>' +
+        A.check.map((r) => '<tr><td>' + r.measure + '</td><td class="num">' + pct(r.agree, 0) + '</td><td class="num">' +
+          r.kappa.toFixed(2).replace(/^0\./, '.') + '</td></tr>').join('') + '</tbody></table></div>' +
+        '<p class="note">Top: share of the coded sentences whose final type label is shared by at least three of the four models. ' +
+        'Bottom: the final labels against one author’s reading of a stratified random sample of ' + A.n_check +
+        ' sentences, made without access to the models’ labels.</p>';
     });
     scorer();
   }
 
-  // The six specificity points as rough pattern rules. The real coding is three
+  // The six specificity points as rough pattern rules. The real coding is four
   // LLMs reading with a codebook; this is a sketch so a visitor can feel the rubric.
   const CHECKS = [
     ['action', 'an action, not an intention', /\b(deploy(?:ed|s|ing)?|launch(?:ed|es|ing)?|us(?:es|ed|ing)|operat\w+|power(?:s|ed|ing)?|embed(?:ded|s)?|integrat\w+|runs?|running|serv(?:es|ing)|deliver\w+|process(?:es|ing)?|automat\w+|answers?|handles?|detects?|predicts?|leverag\w+|provid(?:es|ing)|offers?|puts?|gives?|generat\w+|analyz\w+|optimiz\w+|enables?)\b/i],
@@ -853,7 +880,7 @@
       $('#sc-out').innerHTML = CHECKS.map(([k, d], i) =>
         '<div class="sc-pt' + (hits[i] ? ' on' : '') + '"><b>' + k + '</b><small>' + d + '</small></div>').join('');
       const coders = (s === exText && exPts !== null)
-        ? ' · the paper’s three coders, reading the sentence in its filing context, gave it <b>' + exPts + ' of 6</b>' : '';
+        ? ' · the paper’s coders, reading the sentence in its filing context, gave it <b>' + exPts + ' of 6</b>' : '';
       $('#sc-sum').innerHTML = '<b>' + n + ' of 6 points</b> · ' +
         (n >= 3 ? 'would count as a specific capability claim' : 'below the 3-point bar: not specific') +
         ' <small>(by these rough rules, not the paper’s coders' + coders + ')</small>';
