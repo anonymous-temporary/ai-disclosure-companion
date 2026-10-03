@@ -8,7 +8,7 @@
   'use strict';
   const $ = (s) => document.querySelector(s);
   const $$ = (s) => Array.from(document.querySelectorAll(s));
-  const V = '?v=18';                                        // bump on each release: GitHub Pages caches hard
+  const V = '?v=19';                                        // bump on each release: GitHub Pages caches hard
   const J = (p) => fetch('data/' + p + V).then((r) => r.json());
   const REDUCED = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   function countTo(el, to, suffix) {                       // a stat tile counts up to its value once
@@ -853,7 +853,7 @@
         A.check.map((r) => '<tr><td>' + r.measure + '</td><td class="num">' + pct(r.agree, 0) + '</td><td class="num">' +
           r.kappa.toFixed(2).replace(/^0\./, '.') + '</td></tr>').join('') + '</tbody></table></div>' +
         '<p class="note">Top: share of the coded sentences whose final type label is shared by at least three of the four models. ' +
-        'Bottom: the final labels against one author’s reading of a stratified random sample of ' + A.n_check +
+        'Bottom: the final labels against a separate coding of a stratified random sample of ' + A.n_check +
         ' sentences, made without access to the models’ labels.</p>';
     });
     scorer();
