@@ -5,9 +5,10 @@
      1  AI language spreads, a year-by-year sweep
      2  specific capability claims stay rare
      3  the dots regroup by sector: claims concentrate where sectors build AI
-   Any click, key press or scroll pauses it; the Play pill resumes. Numbers in
-   the readout count between values. prefers-reduced-motion lands on the final
-   stage with no animation.
+   It always runs: only its Pause pill stops it (owner 2026-10-02), and it
+   restarts from the first stage whenever the Overview tab is opened again.
+   Numbers in the readout count between values. prefers-reduced-motion lands on
+   the final stage with no animation.
    ========================================================================= */
 (function (global) {
   'use strict';
@@ -236,11 +237,7 @@
     bar.style.transition = 'none'; bar.style.transform = now;
     paint();
   }
-
-  function interrupt(e) {
-    if (e.target && e.target.closest && e.target.closest('.tour')) return;
-    pause();
-  }
+  function restart() { if (reduced || !btn) return; playing = false; gen++; idx = 0; play(); }   // from the first stage
 
   /* ----------------------------------------------------------- boot */
   function init(data) {
@@ -255,10 +252,6 @@
     tourEl.innerHTML = '<button type="button" class="tour-btn"><span class="tour-t">Play</span><i class="tour-bar"></i></button>';
     btn = tourEl.querySelector('.tour-btn'); bar = tourEl.querySelector('.tour-bar');
     btn.addEventListener('click', function () { playing ? pause() : play(); });
-    document.addEventListener('pointerdown', interrupt, true);
-    document.addEventListener('keydown', interrupt, true);
-    global.addEventListener('wheel', interrupt, { passive: true, capture: true });
-    global.addEventListener('touchstart', interrupt, { passive: true, capture: true });
     global.addEventListener('resize', function () { build(); draw(Math.max(0, cur.stage), cur.sweep, 1); });
     if (reduced) {
       setStage(3);
@@ -297,6 +290,6 @@
     return true;
   }
 
-  global.Hero = { init: init, pause: pause, vector: vector,
+  global.Hero = { init: init, pause: pause, restart: restart, vector: vector,
                   stage: function (s) { pause(); setStage(s, 12); } };     // deterministic hooks for tests and screenshots
 })(window);

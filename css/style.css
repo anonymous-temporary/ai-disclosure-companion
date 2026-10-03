@@ -447,13 +447,6 @@ mark{background:color-mix(in srgb,var(--c3) 40%,transparent);color:inherit;
 /* --------------------------------------------- Filings: guide, tour and the filing window (2026-10-02) */
 .guide{margin:0 0 24px;padding-left:20px;color:var(--ink-2);font-size:15px;line-height:1.55;display:grid;gap:6px;max-width:980px}
 .guide b{color:var(--ink);font-weight:650}
-.inv-tour{font:inherit;font-size:12px;font-weight:600;padding:6px 14px 8px;border:1px solid var(--line-2);border-radius:99px;
-  background:var(--surface);color:var(--ink-2);cursor:pointer;position:relative;overflow:hidden;white-space:nowrap}
-.inv-tour:hover{border-color:var(--ink-3);color:var(--ink)}
-.inv-tour.on{border-color:var(--accent);color:var(--accent)}
-.inv-tour .tp-bar{position:absolute;left:0;bottom:0;height:2px;width:0;background:var(--accent)}
-a.inv-cell.tour-hit{box-shadow:0 0 0 2px var(--accent);animation:tourPulse 1.1s ease-in-out infinite;position:relative;z-index:2}
-@keyframes tourPulse{0%,100%{box-shadow:0 0 0 2px var(--accent),0 0 0 3px rgba(0,114,178,.35)}50%{box-shadow:0 0 0 2px var(--accent),0 0 0 8px rgba(0,114,178,.08)}}
 
 .modal.fw{max-width:1200px;height:min(90vh,1000px);max-height:none;overflow:hidden}
 .fw-back{padding:4vh 16px;animation:fwIn .18s ease-out}
@@ -529,7 +522,7 @@ a.inv-cell.tour-hit{box-shadow:0 0 0 2px var(--accent);animation:tourPulse 1.1s 
   .modal.fw{height:94vh}
   .fw-years small{display:none}
 }
-@media(prefers-reduced-motion:reduce){.fw-back,.fw-back .modal.fw,a.inv-cell.tour-hit{animation:none}}
+@media(prefers-reduced-motion:reduce){.fw-back,.fw-back .modal.fw{animation:none}}
 
 /* --------------------------------------------- the variables, one by one (2026-10-01) */
 .vargrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
@@ -557,6 +550,7 @@ a.inv-cell.tour-hit{box-shadow:0 0 0 2px var(--accent);animation:tourPulse 1.1s 
 .hr-num{font-family:var(--serif);font-size:46px;font-weight:600;line-height:1.05;color:var(--accent);font-variant-numeric:tabular-nums}
 .hr-sub{font-size:12.5px;color:var(--ink-3);line-height:1.5}
 .tour{position:absolute;top:12px;right:14px;z-index:5}
+.playcard{position:relative}.playcard>h2{padding-right:96px}          /* a card that carries its own Play/Pause pill */
 .tour-btn{font:inherit;font-size:12px;font-weight:600;padding:5px 14px 7px;border:1px solid var(--line-2);
   border-radius:99px;background:var(--surface);color:var(--ink-2);cursor:pointer;position:relative;overflow:hidden}
 .tour.on .tour-btn{border-color:var(--accent);color:var(--accent)}

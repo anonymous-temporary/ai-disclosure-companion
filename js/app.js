@@ -8,7 +8,7 @@
   'use strict';
   const $ = (s) => document.querySelector(s);
   const $$ = (s) => Array.from(document.querySelectorAll(s));
-  const V = '?v=13';                                        // bump on each release: GitHub Pages caches hard
+  const V = '?v=14';                                        // bump on each release: GitHub Pages caches hard
   const J = (p) => fetch('data/' + p + V).then((r) => r.json());
   const REDUCED = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   function countTo(el, to, suffix) {                       // a stat tile counts up to its value once
@@ -62,10 +62,10 @@
   function show(v) {
     $$('#nav button').forEach((b) => b.classList.toggle('on', b.dataset.view === v));
     $$('.view').forEach((s) => (s.hidden = s.id !== 'view-' + v));
-    if (v !== 'overview' && window.Hero) Hero.pause();
+    if (v !== 'overview') { if (window.Hero) Hero.pause(); diffPause(); }
     if (v !== 'filings' && loaded.filings) leaveFilings();
     if (!loaded[v]) { loaded[v] = true; INIT[v](); }
-    else if (v === 'filings') startTour();
+    else if (v === 'overview') { if (window.Hero) Hero.restart(); diffPlay(true); }   // reopening the Overview reruns both animations
     window.scrollTo({ top: 0 });
   }
 
@@ -83,10 +83,13 @@
       const seg = $('#ov-seg');
       seg.addEventListener('click', (e) => {
         const b = e.target.closest('button'); if (!b) return;
-        seg.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b));
-        diffusion(D, b.dataset.k);
+        diffShow(b.dataset.k);                                        // the cycle carries on from the chosen form
       });
-      diffusion(D, 'C');
+      DIFF.D = D;
+      $('#diff-tour').innerHTML = '<button type="button" class="tour-btn"><span class="tour-t">Play</span><i class="tour-bar"></i></button>';
+      $('#diff-tour .tour-btn').addEventListener('click', () => (DIFF.playing ? diffPause() : diffPlay(false)));
+      diffShow('C');
+      diffPlay(false);
     });
   }
 
@@ -221,6 +224,43 @@
     const stopSpot = () => { clearInterval(spot); cards.forEach((c) => c.classList.remove('live')); };
     document.addEventListener('pointerdown', stopSpot, { once: true, capture: true });
     window.addEventListener('wheel', stopSpot, { once: true, passive: true, capture: true });
+  }
+
+  // the diffusion chart plays through the four forms of disclosure on its own (owner 2026-10-02): always on unless its
+  // Pause pill is pressed; an outcome button jumps the cycle to that form and it carries on; reopening the Overview
+  // restarts it from specific claims. Each change redraws the lines from the left (diffusion below).
+  const DIFF = { order: ['C', 'G', 'F', 'AI'], i: 0, timer: null, playing: false, D: null, MS: 4200 };
+  function diffShow(k) {
+    if (!DIFF.D) return;
+    DIFF.i = Math.max(0, DIFF.order.indexOf(k));
+    $$('#ov-seg button').forEach((x) => x.classList.toggle('on', x.dataset.k === k));
+    diffusion(DIFF.D, k);
+    diffArm();
+  }
+  function diffArm() {
+    clearTimeout(DIFF.timer);
+    const bar = $('#diff-tour .tour-bar');
+    if (bar) { bar.style.transition = 'none'; bar.style.transform = 'scaleX(0)'; bar.getBoundingClientRect(); }
+    if (!DIFF.playing) return;
+    if (bar) { bar.style.transition = 'transform ' + DIFF.MS + 'ms linear'; bar.style.transform = 'scaleX(1)'; }
+    DIFF.timer = setTimeout(() => diffShow(DIFF.order[(DIFF.i + 1) % DIFF.order.length]), DIFF.MS);
+  }
+  function diffPaint() {
+    const t = $('#diff-tour'); if (!t || !t.querySelector('.tour-t')) return;
+    t.classList.toggle('on', DIFF.playing);
+    t.querySelector('.tour-t').textContent = DIFF.playing ? 'Pause' : 'Play';
+  }
+  function diffPlay(restart) {
+    if (REDUCED || !DIFF.D) return;
+    DIFF.playing = true; diffPaint();
+    if (restart) diffShow('C'); else diffArm();
+  }
+  function diffPause() {
+    if (!DIFF.playing) return;
+    DIFF.playing = false; clearTimeout(DIFF.timer);
+    const bar = $('#diff-tour .tour-bar');
+    if (bar) { const now = getComputedStyle(bar).transform; bar.style.transition = 'none'; bar.style.transform = now; }
+    diffPaint();
   }
 
   function diffusion(D, k) {
@@ -391,8 +431,8 @@
   // ============================================================== FILINGS
   // The grid (one square per firm-year) opens a FILING WINDOW (owner 2026-10-02, after the paper-3 review panel):
   // every coded sentence of that 10-K, grouped by type with its six specificity criteria, beside the firm's
-  // resources as the models read them (fiscal year t-1). A short tour plays when the tab opens; any click, key,
-  // wheel or touch stops it and hands control to the reader.
+  // resources as the models read them (fiscal year t-1). No tour or autoplay on this tab (owner 2026-10-02): it opens
+  // as a plain grid and waits for the reader.
   const SENT = {}, CODED = {}, PROF = {};
   function sentFor(slug) {
     return SENT[slug] || (SENT[slug] = J('sentences/' + slug + '.json').catch(() => ({})));
@@ -427,9 +467,7 @@
       });
       grid.addEventListener('mousemove', hoverCell);
       grid.addEventListener('mouseleave', C.hideTip);
-      $('#inv-tour').addEventListener('click', () => (TOUR.on ? stopTour(null) : startTour()));
       FS.render();
-      startTour();
     });
   }
   function latestFy(f) {
@@ -521,14 +559,14 @@
       if (i >= 0 && i < fys.length) { e.preventDefault(); fillWindow(WIN.cik, fys[i]); }
     }
   }
-  function openFiling(cik, fy, opts) {
+  function openFiling(cik, fy) {
     closeWindow();
     const f = FS.byCik[cik];
     const el = document.createElement('div');
     el.className = 'modal-back fw-back';
     el.innerHTML = '<div class="modal fw" role="dialog" aria-modal="true" aria-label="Coded sentences and resources for ' + esc(f.name) + '"></div>';
     document.body.appendChild(el);
-    WIN = { el, cik, fy, tour: !!(opts && opts.tour), filter: 'all' };
+    WIN = { el, cik, fy, filter: 'all' };
     el.addEventListener('click', (e) => {
       if (e.target === el || e.target.closest('.modal-x')) { closeWindow(); return; }
       const yb = e.target.closest('.fw-yr'); if (yb) { fillWindow(cik, +yb.dataset.fy); return; }
@@ -557,7 +595,6 @@
     box.querySelector('.fw-sents').innerHTML = sentencesHtml(rec, yrow);
     box.querySelector('.fw-res').innerHTML = resourcesHtml(f, fy, prof[String(cik)] || []);
     paintFilter();
-    if (WIN.tour) tourScroll(box.querySelector('.fw-sents'));
   }
   function head(f, fy, yrow, url) {
     const kind = IN_HOUSE.has(f.ind) ? 'sector builds AI in-house' : 'sector buys AI';
@@ -700,73 +737,7 @@
     return h;
   }
 
-  // ---------------------------------------------------------------- the tour
-  const TOUR = { on: false, timers: [], i: 0, stops: null, cell: null };
-  function tourStops() {
-    if (TOUR.stops) return TOUR.stops;
-    TOUR.stops = Object.keys(SLUG).map((ind) => {
-      let best = null;
-      FS.F.forEach((f) => {
-        if (f.ind !== ind) return;
-        f.years.forEach((y) => { if (y[1] && y[3] > 0 && (!best || y[3] > best.n || (y[3] === best.n && y[0] > best.fy))) best = { cik: f.cik, fy: y[0], n: y[3], ind }; });
-      });
-      return best;
-    }).filter(Boolean);
-    return TOUR.stops;
-  }
-  const later = (ms, fn) => TOUR.timers.push(setTimeout(fn, ms));
-  function pill() {
-    const b = $('#inv-tour');
-    if (!b) return;
-    b.classList.toggle('on', TOUR.on);
-    b.querySelector('.tp-t').textContent = TOUR.on ? 'Pause tour' : 'Play tour';
-  }
-  function startTour() {
-    if (REDUCED || TOUR.on || !FS.F) return;
-    TOUR.on = true; pill();
-    ['pointerdown', 'keydown', 'wheel', 'touchstart'].forEach((ev) => window.addEventListener(ev, userTakesOver, { capture: true, passive: true }));
-    tourStep();
-  }
-  function userTakesOver(e) {
-    if (!e.isTrusted || !TOUR.on) return;
-    if (e.target && e.target.closest && e.target.closest('#inv-tour')) return;   // the pill toggles on its own
-    const inWindow = WIN && (e.type === 'keydown' || (e.target && e.target.closest && e.target.closest('.fw')));
-    stopTour(inWindow ? 'keep' : null);
-  }
-  function stopTour(keep) {
-    if (!TOUR.on) return;
-    TOUR.on = false;
-    TOUR.timers.forEach(clearTimeout); TOUR.timers = [];
-    ['pointerdown', 'keydown', 'wheel', 'touchstart'].forEach((ev) => window.removeEventListener(ev, userTakesOver, { capture: true }));
-    if (TOUR.cell) TOUR.cell.classList.remove('tour-hit');
-    if (WIN) { if (keep === 'keep') WIN.tour = false; else closeWindow(); }
-    const bar = $('#inv-tour .tp-bar'); if (bar) { bar.style.transition = 'none'; bar.style.width = '0'; }
-    pill();
-  }
-  function tourStep() {
-    if (!TOUR.on) return;
-    const stops = tourStops(); if (!stops.length) return;
-    const s = stops[TOUR.i % stops.length]; TOUR.i += 1;
-    closeWindow();
-    $('#inv-search').value = ''; $('#inv-c').checked = false;
-    if ($('#inv-ind').value !== s.ind) { $('#inv-ind').value = s.ind; FS.render(); }
-    const cell = $('#inv-grid a.inv-cell[data-cik="' + s.cik + '"][data-fy="' + s.fy + '"]');
-    if (TOUR.cell) TOUR.cell.classList.remove('tour-hit');
-    TOUR.cell = cell;
-    const STEP = 9500;
-    const bar = $('#inv-tour .tp-bar');
-    if (bar) { bar.style.transition = 'none'; bar.style.width = '0'; void bar.offsetWidth; bar.style.transition = 'width ' + STEP + 'ms linear'; bar.style.width = '100%'; }
-    if (cell) { cell.closest('.inv-row').scrollIntoView({ block: 'center', behavior: 'smooth' }); cell.classList.add('tour-hit'); }
-    later(1300, () => openFiling(s.cik, s.fy, { tour: true }));
-    later(STEP, () => { if (cell) cell.classList.remove('tour-hit'); tourStep(); });
-  }
-  function tourScroll(list) {
-    if (!list) return;
-    const target = list.querySelector('.fw-group[data-k="G"], .fw-group[data-k="F"]');
-    if (!target) return;
-    later(4200, () => { if (WIN && WIN.tour) list.scrollTo({ top: target.offsetTop - list.offsetTop - 8, behavior: 'smooth' }); });
-  }
-  const leaveFilings = () => { stopTour(null); closeWindow(); };
+  const leaveFilings = () => closeWindow();
 
   // ============================================================== METHOD
   // What each variable is: the raw material it starts as, its source, and its distribution over

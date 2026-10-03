@@ -8,9 +8,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=13">
-<link rel="preload" href="data/headline.json?v=13" as="fetch" crossorigin>
-<link rel="preload" href="data/hero.json?v=13" as="fetch" crossorigin>
+<link rel="stylesheet" href="css/style.css?v=14">
+<link rel="preload" href="data/headline.json?v=14" as="fetch" crossorigin>
+<link rel="preload" href="data/hero.json?v=14" as="fetch" crossorigin>
 </head>
 <body>
 
@@ -100,7 +100,8 @@
       </div>
     </div>
 
-    <div class="card">
+    <div class="card playcard">
+      <div id="diff-tour" class="tour"></div>
       <h2>AI disclosure by sector and fiscal year</h2>
       <p class="sub">Share of each sector's 10-Ks containing the selected form of AI disclosure.
         Hover a point for the exact share and sample size.</p>
@@ -204,8 +205,6 @@
         <li><b>Hover a square</b> for a one-line preview; Ctrl-click (&#8984;-click on a Mac) opens the
           10-K itself on sec.gov.</li>
         <li><b>Search</b> finds a company in any of the nine sectors; the menu switches sectors.</li>
-        <li><b>A short tour plays when this tab opens.</b> Click anywhere to stop it and explore, or
-          press Play tour to watch it again.</li>
       </ul>
     </div>
     <div class="card">
@@ -215,7 +214,6 @@
         <select id="inv-ind" aria-label="Sector"></select>
         <label class="chk"><input type="checkbox" id="inv-c"> Only firms with a specific claim</label>
         <span class="count" id="inv-count"></span>
-        <button id="inv-tour" class="inv-tour" type="button"><span class="tp-t">Play tour</span><span class="tp-bar"></span></button>
       </div>
       <div class="legend inv-legend">
         <span><i style="background:var(--surface);box-shadow:inset 0 0 0 1px var(--line-2)"></i>filed, outside the operating screen that year</span>
@@ -298,8 +296,8 @@
 
 </main>
 
-<script src="js/charts.js?v=13"></script>
-<script src="js/hero.js?v=13"></script>
-<script src="js/app.js?v=13"></script>
+<script src="js/charts.js?v=14"></script>
+<script src="js/hero.js?v=14"></script>
+<script src="js/app.js?v=14"></script>
 </body>
 </html>
