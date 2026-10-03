@@ -8,7 +8,7 @@
   'use strict';
   const $ = (s) => document.querySelector(s);
   const $$ = (s) => Array.from(document.querySelectorAll(s));
-  const V = '?v=16';                                        // bump on each release: GitHub Pages caches hard
+  const V = '?v=17';                                        // bump on each release: GitHub Pages caches hard
   const J = (p) => fetch('data/' + p + V).then((r) => r.json());
   const REDUCED = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   function countTo(el, to, suffix) {                       // a stat tile counts up to its value once
@@ -42,7 +42,7 @@
     'Utilities': '--i7', 'Construction': '--i8', 'Construction machinery': '--i9',
   };
   const RES_NAME = {
-    L1_RD_SALES0: 'R&D / revenue (R₁)', L1_LOG_AI_PAT_STOCK: 'AI patent portfolio (R₂)',
+    L1_RD_SALES0: 'R&D intensity (R₁)', L1_LOG_AI_PAT_STOCK: 'AI patent portfolio (R₂)',
     L1_AI_WORKER: 'AI-worker share (R₃)',
   };
 
@@ -101,7 +101,7 @@
 
   // resources x {C, G, F}, both designs, as plain marks (owner 2026-10-01): the comparison outcomes beside the claims
   function outcomeGrid(M) {
-    const RES = [['L1_RD_SALES0', 'R&amp;D / revenue (R₁)'], ['L1_LOG_AI_PAT_STOCK', 'AI patent portfolio (R₂)'],
+    const RES = [['L1_RD_SALES0', 'R&amp;D intensity (R₁)'], ['L1_LOG_AI_PAT_STOCK', 'AI patent portfolio (R₂)'],
                  ['L1_AI_WORKER', 'AI-worker share (R₃)']];
     const OUT = [['ln_C', 'Specific capability claims (C)', 'hypothesized'], ['ln_G', 'Generic AI risk (G)', 'comparison'],
                  ['ln_F', 'Firm-specific AI risk (F)', 'comparison']];
@@ -370,7 +370,7 @@
     const host = $('#h3-lines'); host.innerHTML = '';
     MG.filter((m) => m.fe === fe).forEach((m) => {
       const div = document.createElement('div');
-      div.innerHTML = '<h3 class="mini-h">' + (m.resource === 'R&D / revenue' ? 'R&D / revenue (R₁)' : 'AI patent portfolio (R₂)') + '</h3><div class="chart"></div>';
+      div.innerHTML = '<h3 class="mini-h">' + (m.resource === 'R&D / revenue' ? 'R&D intensity (R₁)' : 'AI patent portfolio (R₂)') + '</h3><div class="chart"></div>';
       host.appendChild(div);
       C.bandLine(div.querySelector('.chart'), {
         x: m.x, xFmt: (v) => pct(v, 1), yFmt: (v) => String(+v.toFixed(3)).replace(/^(-?)0\./, '$1.'),
@@ -417,7 +417,7 @@
           '<div><div class="k">firms / firm-years</div><div class="v">' + fmtInt(s.firms) + ' / ' + fmtInt(s.fy) + '</div></div>' +
           '<div><div class="k">10-Ks with a specific claim</div><div class="v">' + pct(s.anyC, 1) + '</div></div>' +
           '<div><div class="k">with generic AI risk</div><div class="v">' + pct(s.anyG, 1) + '</div></div>' +
-          '<div><div class="k">median R&D / revenue</div><div class="v">' + (s.rd_med === 0 ? '0' : String(+s.rd_med.toFixed(2)).replace(/^0\./, '.')) + '</div></div>' +
+          '<div><div class="k">median R&D intensity</div><div class="v">' + (s.rd_med === 0 ? '0' : String(+s.rd_med.toFixed(2)).replace(/^0\./, '.')) + '</div></div>' +
           '<div><div class="k">firm-years reporting R&D</div><div class="v">' + pct(s.rd_pos) + '</div></div>' +
           '<div><div class="k">with an AI patent portfolio</div><div class="v">' + pct(s.pat) + '</div></div>' +
           '<div><div class="k">mean litigation exposure</div><div class="v">' + pct(s.suit, 1) + '</div></div>' +
@@ -753,7 +753,7 @@
     F: { name: 'Firm-specific AI risk (F)', raw: '10-K sentences',
          unit: 'sentences per 10,000 words',
          src: 'AI risk language tied to the firm’s own products, operations or deployments.' },
-    L1_RD_SALES0: { name: 'R&D / revenue (R₁)', raw: 'accounting figures',
+    L1_RD_SALES0: { name: 'R&D intensity (R₁)', raw: 'accounting figures',
          unit: 'ratio at t-1, capped at 1',
          src: 'Two lines of the firm’s own financial statements (Compustat and SEC XBRL): R&D expense over revenue.' },
     L1_LOG_AI_PAT_STOCK: { name: 'AI patent portfolio (R₂)', raw: 'patent grants',
