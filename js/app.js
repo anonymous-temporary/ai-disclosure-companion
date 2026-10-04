@@ -8,7 +8,7 @@
   'use strict';
   const $ = (s) => document.querySelector(s);
   const $$ = (s) => Array.from(document.querySelectorAll(s));
-  const V = '?v=19';                                        // bump on each release: GitHub Pages caches hard
+  const V = '?v=20';                                        // bump on each release: GitHub Pages caches hard
   const J = (p) => fetch('data/' + p + V).then((r) => r.json());
   const REDUCED = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   function countTo(el, to, suffix) {                       // a stat tile counts up to its value once
