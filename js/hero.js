@@ -37,17 +37,19 @@
   }
 
   /* pack each column bottom-up; pitch chosen so the tallest column fits */
+  var GROUPS = ['AI producers', 'AI co-developers', 'AI adopters'];
   function layout(colOf, ncol, gapAfter) {
     var W = cv.width / DPR, H = cv.height / DPR, top = 8, bottom = 22;
     var counts = []; for (var c = 0; c < ncol; c++) counts.push(0);
     dots.forEach(function (d) { counts[colOf(d)]++; });
-    var gap = 10, extra = gapAfter >= 0 ? 14 : 0;
-    var colW = (W - gap * (ncol - 1) - extra) / ncol;
+    var gaps = gapAfter instanceof Array ? gapAfter : (gapAfter >= 0 ? [gapAfter] : []);
+    var gap = 10, extra = 14;
+    var colW = (W - gap * (ncol - 1) - extra * gaps.length) / ncol;
     var maxN = Math.max.apply(null, counts);
     var p = Math.max(1.6, Math.min(3.4, Math.sqrt(colW * (H - top - bottom) / maxN) * 0.97));
     var perRow = Math.max(1, Math.floor(colW / p));
     var x0 = [], acc = 0;
-    for (c = 0; c < ncol; c++) { x0.push(acc); acc += colW + gap + (c === gapAfter ? extra : 0); }
+    for (c = 0; c < ncol; c++) { x0.push(acc); acc += colW + gap + (gaps.indexOf(c) >= 0 ? extra : 0); }
     var idx = counts.map(function () { return 0; });
     var pos = new Float32Array(dots.length * 2);
     dots.forEach(function (d, i) {
@@ -70,13 +72,14 @@
     /* within each column: no-AI first (bottom), AI, then claims, so the lit dots surface on top */
     dots.sort(function (a, b) { return (a.y - b.y) || (a.l - b.l) || (a.s - b.s); });
     layouts.year = layout(function (d) { return d.y; }, 12, -1);
-    var secOrder = [], inh = [], buy = [];
-    D.sectors.forEach(function (s, i) { (D.inhouse[i] ? inh : buy).push(i); });
-    secOrder = inh.concat(buy);
+    var secOrder = [], grp = [[], [], []];                 /* AI producers, co-developers, adopters */
+    D.sectors.forEach(function (s, i) { grp[D.mode[i]].push(i); });
+    secOrder = grp[0].concat(grp[1], grp[2]);
     var rank = {}; secOrder.forEach(function (s, i) { rank[s] = i; });
     dots.sort(function (a, b) { return (rank[a.s] - rank[b.s]) || (a.l - b.l); });
-    layouts.sector = layout(function (d) { return rank[d.s]; }, 9, inh.length - 1);
-    layouts.sector.order = secOrder; layouts.sector.nInh = inh.length;
+    var c1 = grp[0].length, c2 = c1 + grp[1].length;
+    layouts.sector = layout(function (d) { return rank[d.s]; }, 9, [c1 - 1, c2 - 1]);
+    layouts.sector.order = secOrder; layouts.sector.cut = [0, c1, c2, 9];
     /* back to year order as the resting order of the dot array */
     dots.forEach(function (d, i) { d.sx = layouts.sector.pos[2 * i]; d.sy = layouts.sector.pos[2 * i + 1]; });
     dots.sort(function (a, b) { return (a.y - b.y) || (a.l - b.l) || (a.s - b.s); });
@@ -113,9 +116,8 @@
       for (var c = 0; c < 12; c += 2) ctx.fillText(String(2014 + c), Ly.x0[c] + Ly.colW / 2, H - 6);
     }
     if (stage === 3 && mix > 0.5) {
-      var Ls = layouts.sector, half = Ls.x0[Ls.nInh - 1] + Ls.colW;
-      ctx.fillText('develop AI internally', (Ls.x0[0] + half) / 2, H - 6);
-      ctx.fillText('obtain AI externally', (Ls.x0[Ls.nInh] + Ls.x0[8] + Ls.colW) / 2, H - 6);
+      var Ls = layouts.sector;
+      for (var g = 0; g < 3; g++) ctx.fillText(GROUPS[g], (Ls.x0[Ls.cut[g]] + Ls.x0[Ls.cut[g + 1] - 1] + Ls.colW) / 2, H - 6);
     }
   }
 
@@ -196,7 +198,7 @@
         } },
       { ms: 4200, run: function (sl) {
           setStage(3);
-          readout('Claims concentrate where AI is developed internally', C.cSoft, fmtPct, 'of software 10-Ks contain a specific claim, against ' + fmtPct(C.cRetail) + ' in retail');
+          readout('Claims concentrate among AI producers', C.cSoft, fmtPct, 'of software 10-Ks contain a specific claim, against ' + fmtPct(C.cRetail) + ' in retail');
           return sl(4200);
         } }
     ];
@@ -255,7 +257,7 @@
     global.addEventListener('resize', function () { build(); draw(Math.max(0, cur.stage), cur.sweep, 1); });
     if (reduced) {
       setStage(3);
-      readout('Claims concentrate where AI is developed internally', C.cSoft, fmtPct, 'of software 10-Ks contain a specific claim, against ' + fmtPct(C.cRetail) + ' in retail');
+      readout('Claims concentrate among AI producers', C.cSoft, fmtPct, 'of software 10-Ks contain a specific claim, against ' + fmtPct(C.cRetail) + ' in retail');
     } else {
       setStage(0);
       play();
@@ -279,9 +281,8 @@
     var tx = function (x, s) { out.push('<text x="' + x + '" y="' + (h - 6) + '" font-family="Inter,sans-serif" font-size="11" fill="#8a8578" text-anchor="middle">' + s + '</text>'); };
     if (!sec) { for (var c = 0; c < 12; c += 2) tx(layouts.year.x0[c] + layouts.year.colW / 2, String(2014 + c)); }
     else {
-      var Ls = layouts.sector, half = Ls.x0[Ls.nInh - 1] + Ls.colW;
-      tx((Ls.x0[0] + half) / 2, 'develop AI internally');
-      tx((Ls.x0[Ls.nInh] + Ls.x0[8] + Ls.colW) / 2, 'obtain AI externally');
+      var Ls = layouts.sector;
+      for (var g = 0; g < 3; g++) tx((Ls.x0[Ls.cut[g]] + Ls.x0[Ls.cut[g + 1] - 1] + Ls.colW) / 2, GROUPS[g]);
     }
     out.push('</svg>');
     var host = document.createElement('div');

@@ -125,10 +125,15 @@
     host.querySelectorAll('.og-cell').forEach((c, i) => { c.style.animationDelay = (200 + i * 90) + 'ms'; c.classList.add('pop'); });
   }
 
+  const MODE_NAME = { producer: 'AI producer', 'co-developer': 'AI co-developer', adopter: 'AI adopter' };
+  const MODE_COL = { producer: '--c2', 'co-developer': '--c1', adopter: '--c3' };
+
   function verdicts(M, SLO) {
     const rd = ['H1 L1_RD_SALES0', 'L1_RD_SALES0'], ap = ['H1 L1_LOG_AI_PAT_STOCK', 'L1_LOG_AI_PAT_STOCK'];
     const h2a = est(M, 'H2 L1_RD_SALES0 x HIGH_AIIE', 'RxM', 'WITHIN'), h2aB = est(M, 'H2 L1_RD_SALES0 x HIGH_AIIE', 'RxM', 'BETWEEN');
-    const h2b = est(M, 'H2 L1_LOG_AI_PAT_STOCK x INTERNAL_DEV', 'RxM', 'WITHIN'), h2bB = est(M, 'H2 L1_LOG_AI_PAT_STOCK x INTERNAL_DEV', 'RxM', 'BETWEEN');
+    const MM = 'H2 L1_LOG_AI_PAT_STOCK x AI_MODE';          // AI patents x AI production mode (producers, co-developers, adopters)
+    const h2b = est(M, MM, 'contrast producer minus co-developer', 'WITHIN'), h2bB = est(M, MM, 'contrast producer minus co-developer', 'BETWEEN');
+    const h2c = est(M, MM, 'contrast co-developer minus adopter', 'WITHIN'), h2cB = est(M, MM, 'contrast co-developer minus adopter', 'BETWEEN');
     const h3r = est(M, 'H3 L1_RD_SALES0 baseline', 'RxL', 'WITHIN'), h3rB = est(M, 'H3 L1_RD_SALES0 baseline', 'RxL', 'BETWEEN');
     const h3p = est(M, 'H3 L1_LOG_AI_PAT_STOCK baseline', 'RxL', 'WITHIN'), h3pB = est(M, 'H3 L1_LOG_AI_PAT_STOCK baseline', 'RxL', 'BETWEEN');
     // each finding as a small animated scene (owner 2026-10-01): the statement in words on the card, the
@@ -199,15 +204,16 @@
        'R&D intensity ' + pp(est(M, rd[0], rd[1], 'WITHIN')) + ' | ' + pp(est(M, rd[0], rd[1], 'BETWEEN')) +
        ' · AI patent portfolio ' + pp(est(M, ap[0], ap[1], 'WITHIN')) + ' | ' + pp(est(M, ap[0], ap[1], 'BETWEEN')) + ', within | between firms'],
       ['ok', 'H2 congruence', scenes.h2, 'Resources matter most where they fit the industry',
-       'Patents align with claims in sectors that develop AI internally; R&D where industry AI exposure is high.',
-       'AI patent portfolio × internal AI development ' + pp(h2b) + ' | ' + pp(h2bB) +
+       'Patents align with claims most among AI producers, less among co-developers and not among adopters; R&D where industry AI exposure is high.',
+       'AI patent portfolio: producers minus co-developers ' + pp(h2b) + ' | ' + pp(h2bB) +
+       ' · co-developers minus adopters ' + pp(h2c) + ' | ' + pp(h2cB) +
        ' · R&D intensity × high industry AI exposure ' + pp(h2a) + ' | ' + pp(h2aB)],
       ['half', 'H3a and H3b, pooled', scenes.h3, 'No net effect of litigation exposure',
        'Across the nine sectors, litigation exposure does not detectably strengthen or weaken the link between resources and claims.',
        'AI patent portfolio × litigation exposure ' + pp(h3p) + ' | ' + pp(h3pB) +
        ' · R&D intensity × litigation exposure ' + pp(h3r) + ' | ' + pp(h3rB)],
-      ['half', 'H3a and H3b, by sector', scenes.h3s, 'Two sectors, two directions',
-       'Between firms, the patent-claims link strengthens with litigation exposure in software and weakens in computers and chips (exploratory).',
+      ['half', 'H3a and H3b, by sector', scenes.h3s, 'Sector estimates are not stable',
+       'Between firms, the patent-claims link strengthens with litigation exposure in software; the opposite sign in computers and chips disappears once the patent slope may change over time (exploratory).',
        'AI patent portfolio × litigation exposure, between firms: software ' + pp(swL) + ' · computers and chips ' + pp(chL)],
     ];
     $('#ov-verdicts').innerHTML = rows.map(([cls, tag, scene, title, plain, stat]) =>
@@ -368,9 +374,10 @@
 
   function h2Forests(M) {
     const host = $('#h2-forests'); host.innerHTML = '';
-    [{ model: 'H2 L1_LOG_AI_PAT_STOCK x INTERNAL_DEV', main: 'L1_LOG_AI_PAT_STOCK',
-       title: 'AI patent portfolio × internal AI development (S₂)',
-       rows: [['L1_LOG_AI_PAT_STOCK', 'AI patent portfolio alone'], ['RxM', '× internal development']] },
+    [{ model: 'H2 L1_LOG_AI_PAT_STOCK x AI_MODE', main: 'L1_LOG_AI_PAT_STOCK',
+       title: 'AI patent portfolio × AI production mode (S₂)',
+       rows: [['slope adopter', 'among AI adopters'], ['contrast co-developer minus adopter', '× AI co-developers'],
+              ['contrast producer minus adopter', '× AI producers'], ['contrast producer minus co-developer', 'producers − co-developers']] },
      { model: 'H2 L1_RD_SALES0 x HIGH_AIIE', main: 'L1_RD_SALES0',
        title: 'R&D intensity × high industry AI exposure (S₁)',
        rows: [['L1_RD_SALES0', 'R&D intensity alone'], ['RxM', '× high AI exposure']] }]
@@ -380,9 +387,9 @@
         host.appendChild(div);
         const rows = cfgRow.rows.map(([term, label]) => {
           const w = est(M, cfgRow.model, term, 'WITHIN'), b = est(M, cfgRow.model, term, 'BETWEEN');
-          return w && b ? { label, bold: term === 'RxM', points: [fpoint(w, 'within firm'), fpoint(b, 'between firms', true)] } : null;
+          return w && b ? { label, bold: term === 'RxM' || term.indexOf('contrast') === 0, points: [fpoint(w, 'within firm'), fpoint(b, 'between firms', true)] } : null;
         }).filter(Boolean);
-        C.forest(div.querySelector('.chart'), { rows, labelW: 128, xFmt: (t) => String(t).replace(/^(-?)0\./, '$1.') });
+        C.forest(div.querySelector('.chart'), { rows, labelW: 196, xFmt: (t) => String(t).replace(/^(-?)0\./, '$1.') });
       });
   }
 
@@ -413,13 +420,12 @@
       .map((s) => {
         const k = lit ? s.per_sd_suit / s.coef : 1, d = lit ? 4 : 3;
         return { label: s.industry, points: [{
-          est: s.coef * k, se: s.se * Math.abs(k), name: s.mode === 'in-house' ? 'develops AI internally' : 'obtains AI externally',
-          color: s.mode === 'in-house' ? '--c2' : '--c3',
+          est: s.coef * k, se: s.se * Math.abs(k), name: MODE_NAME[s.mode], color: MODE_COL[s.mode],
           tip: (lit ? 'change in slope per SD of litigation exposure ' : 'slope ') + (s.coef * k).toFixed(d).replace(/^(-?)0\./, '$1.') +
                ', p ' + pfmt(s.p) + '<br>' + fmtInt(s.firms) + ' firms hold the resource' }] };
       });
     C.forest($('#ch-slopes'), { rows, w: 760, labelW: 170, rowH: 30, xFmt: (t) => String(t).replace(/^(-?)0\./, '$1.') });
-    C.legend($('#ch-slopes'), [{ name: 'develops AI internally', color: '--c2' }, { name: 'obtains AI externally', color: '--c3' }]);
+    C.legend($('#ch-slopes'), ['producer', 'co-developer', 'adopter'].map((m) => ({ name: MODE_NAME[m], color: MODE_COL[m] })));
     need(['models'], ({ models: MM }) => {
       const wd = MM.wald.filter((w) => w.resource === res && w.spec === spec && w.kind === (lit ? 'x suit rate' : 'slope'));
       const one = wd.find((w) => w.fe === fe);
@@ -438,8 +444,7 @@
       host.innerHTML = '<div class="sec-grid">' + S.map((s) => {
         const d = D.series.find((x) => x.name === s.name);
         return '<div class="card sec-card"><div class="sec-head"><h2>' + esc(s.name) + '</h2>' +
-          '<span class="pill ' + (s.mode === 'in-house' ? 'yes' : '') + '">' +
-          (s.mode === 'in-house' ? 'develops AI internally' : 'obtains AI externally') + '</span></div>' +
+          '<span class="pill ' + (s.mode === 'producer' ? 'yes' : '') + '">' + MODE_NAME[s.mode] + '</span></div>' +
           '<div class="kv">' +
           '<div><div class="k">firms / firm-years</div><div class="v">' + fmtInt(s.firms) + ' / ' + fmtInt(s.fy) + '</div></div>' +
           '<div><div class="k">10-Ks with a specific claim</div><div class="v">' + pct(s.anyC, 1) + '</div></div>' +
@@ -467,7 +472,9 @@
   const codedFor = (cik) => CODED[cik] || (CODED[cik] = J('coded/' + cik + '.json').catch(() => ({})));
   const profFor = (ind) => PROF[ind] || (PROF[ind] = J('profiles/' + SLUG[ind] + '.json').catch(() => ({})));
   const FS = { F: null, byCik: {}, SY: null, years: [], render: null };
-  const IN_HOUSE = new Set(['Software & IT services', 'Computers & chips', 'Aerospace & defense', 'Auto manufacturing', 'Pharma & biotech']);
+  const MODE_OF = { 'Software & IT services': 'producer', 'Computers & chips': 'producer', 'Aerospace & defense': 'co-developer',
+                    'Auto manufacturing': 'co-developer', 'Pharma & biotech': 'co-developer', 'Construction machinery': 'co-developer',
+                    'Retail': 'adopter', 'Utilities': 'adopter', 'Construction': 'adopter' };
 
   function initFilings() {
     need(['firms', 'sector_year'], ({ firms: F, sector_year: SY }) => {
@@ -624,7 +631,7 @@
     paintFilter();
   }
   function head(f, fy, yrow, url) {
-    const kind = IN_HOUSE.has(f.ind) ? 'sector builds AI in-house' : 'sector buys AI';
+    const kind = MODE_NAME[MODE_OF[f.ind]] + ' sector';
     const link = url || (yrow ? secUrl(f.cik, yrow[7]) : '');
     const chips = f.years.map((y) => '<button class="fw-yr lv-' + LV(y) + (y[0] === fy ? ' on' : '') + '" data-fy="' + y[0] +
       '" title="FY' + y[0] + ': ' + y[3] + ' specific claims">' + String(y[0]).slice(2) + '</button>').join('');
@@ -792,9 +799,12 @@
     HIGH_AIIE: { name: 'High industry AI exposure (S₁)', raw: 'occupation scores',
          unit: 'above the panel median',
          src: 'A published occupation-based AI exposure score of the firm’s four-digit NAICS industry, so exposure can differ within a sector.' },
-    INTERNAL_DEV: { name: 'Industry builds AI in-house (S₂)', raw: 'sector classification',
-         unit: 'in-house sector',
-         src: 'Equal to 1 in the five sectors classified as predominantly developing AI within their products or processes.' },
+    MODE_PRODUCER: { name: 'AI producer sector (S₂)', raw: 'sector classification',
+         unit: 'producer sector',
+         src: 'Equal to 1 for software and IT services and for computers and chips, whose products embody AI technology.' },
+    MODE_CODEV: { name: 'AI co-developer sector (S₂)', raw: 'sector classification',
+         unit: 'co-developer sector',
+         src: 'Equal to 1 for aerospace and defense, auto manufacturing, pharma and biotech, and construction machinery, which develop AI alongside external technology. Retail, utilities and construction are AI adopters.' },
     IND_LIT_RATE: { name: 'Litigation exposure (L)', raw: 'class actions',
          unit: 'share of sector firms sued',
          src: 'Securities class actions (Audit Analytics, Stanford Clearinghouse): the share of the sector’s firms named as defendants in the calendar year before the filing.' },

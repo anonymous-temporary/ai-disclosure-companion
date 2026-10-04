@@ -8,9 +8,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=21">
-<link rel="preload" href="data/headline.json?v=21" as="fetch" crossorigin>
-<link rel="preload" href="data/hero.json?v=21" as="fetch" crossorigin>
+<link rel="stylesheet" href="css/style.css?v=22">
+<link rel="preload" href="data/headline.json?v=22" as="fetch" crossorigin>
+<link rel="preload" href="data/hero.json?v=22" as="fetch" crossorigin>
 </head>
 <body>
 
@@ -46,9 +46,8 @@
         AI patent portfolios, and the AI-worker share) as the evidence behind <b>specific AI
         capability claims</b>: sentences that describe the firm&rsquo;s own AI capability and satisfy
         at least three of six specificity criteria. The claims track these resources, more strongly
-        where a resource corresponds to how the industry develops AI. Litigation exposure does
-        not detectably change that link overall, although exploratory estimates point in opposite
-        directions in the two sectors where specific claims are most common.
+        where a resource corresponds to how the industry obtains AI. Litigation exposure does
+        not detectably change that link, and the sector estimates are not stable enough to settle the question.
       </p>
     </div>
 
@@ -142,7 +141,7 @@
 
     <div class="card">
       <h2>H2: resource-capability congruence</h2>
-      <p class="sub">Interaction terms: AI patent portfolio &times; internal AI development
+      <p class="sub">Interaction terms: AI patent portfolio &times; AI production mode
         (S&#8322;), and R&amp;D intensity &times; high industry AI exposure (S&#8321;).</p>
       <div class="grid2" id="h2-forests"></div>
     </div>
@@ -164,8 +163,7 @@
       <h2>Resource and litigation associations by sector</h2>
       <p class="sub">The resource slope, or its interaction with litigation exposure (per standard deviation
         of exposure), estimated separately for each sector and drawn where at least 20 firms hold
-        the resource. The sector interactions are exploratory. Green: sectors classified as developing AI internally; amber:
-        sectors that obtain AI externally. Hover for the estimate, p-value and firm count; the Wald
+        the resource. The sector interactions are exploratory. Colours mark AI producers, AI co-developers and AI adopters. Hover for the estimate, p-value and firm count; the Wald
         test assesses whether the drawn estimates are equal.</p>
       <div class="seg" id="sl-seg" role="group" aria-label="Resource and design">
         <button data-res="log AI patent stock" data-fe="WITHIN" class="on">AI patents &middot; within</button>
@@ -185,13 +183,13 @@
   <!-- ============================================ SECTORS -->
   <section id="view-sectors" class="view" hidden>
     <div class="hero">
-      <h1>Nine sectors, <em>two ways of obtaining AI</em></h1>
-      <p class="lede">In five sectors internal AI development is relatively important (software
-        and IT services, computers and chips, aerospace and defense, auto manufacturing, and
-        pharma and biotech); four primarily obtain AI through external providers (retail,
-        utilities, construction, and construction machinery). This classification is the
-        congruence moderator S&#8322;: an AI patent portfolio is expected to be more closely
-        associated with capability claims where AI is developed internally.</p>
+      <h1>Nine sectors, <em>three ways of obtaining AI</em></h1>
+      <p class="lede">Two sectors are AI producers, whose products embody AI technology (software and IT services,
+        computers and chips). Four are AI co-developers, which develop AI for their own products alongside
+        external technology (aerospace and defense, auto manufacturing, pharma and biotech, construction
+        machinery). Three are AI adopters, which mainly use purchased AI (retail, utilities, construction).
+        This classification is the congruence moderator S&#8322;: an AI patent portfolio is expected to be most
+        closely associated with capability claims among producers and least among adopters.</p>
     </div>
     <div id="sec-cards"></div>
   </section>
@@ -304,8 +302,8 @@
 
 </main>
 
-<script src="js/charts.js?v=21"></script>
-<script src="js/hero.js?v=21"></script>
-<script src="js/app.js?v=21"></script>
+<script src="js/charts.js?v=22"></script>
+<script src="js/hero.js?v=22"></script>
+<script src="js/app.js?v=22"></script>
 </body>
 </html>
