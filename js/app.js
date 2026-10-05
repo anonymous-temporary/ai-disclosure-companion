@@ -376,8 +376,8 @@
   function h2Forests(M) {
     const host = $('#h2-forests'); host.innerHTML = '';
     const MODE_ROWS = [['slope producer', 'among AI producers (S1)'], ['slope co-developer', 'among AI co-developers (S2)'],
-                       ['slope adopter', 'among AI adopters (S3)'], ['contrast producer minus co-developer', 'S1 minus S2'],
-                       ['contrast co-developer minus adopter', 'S2 minus S3'], ['contrast producer minus adopter', 'S1 minus S3']];
+                       ['slope adopter', 'among AI adopters (S3)'], ['contrast producer minus co-developer', 'S1 − S2'],
+                       ['contrast co-developer minus adopter', 'S2 − S3'], ['contrast producer minus adopter', 'S1 − S3']];
     [{ model: 'H2 L1_RD_SALES0 x AI_MODE', title: 'R&D intensity (RE1) by AI production mode (S)', rows: MODE_ROWS },
      { model: 'H2 L1_LOG_AI_PAT_STOCK x AI_MODE', title: 'AI patent portfolio (RE2) by AI production mode (S)', rows: MODE_ROWS },
      { model: 'H2 L1_AI_WORKER x AI_MODE', title: 'AI-worker share (RE3) by AI production mode (S)', rows: MODE_ROWS }]
